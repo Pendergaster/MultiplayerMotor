@@ -20,7 +20,6 @@
 
 #include "inputs.h"
 
-
 static void glfw_error_callback(int e, const char *d)
 {
 	printf("Error %d: %s\n", e, d);
@@ -61,13 +60,12 @@ int main(int argc,char* argv[])
 		connection->Update();
 		glfwPollEvents();
 		glm::vec2 mpos = get_mouse_position();
-		printf("update! , %f ,%f ",mpos.x,mpos.y);
+		(void)mpos;
 		if(key_pressed(Key::KEY_E)) {
 			LOG("e pressed\n");
 		} else if (key_down(Key::KEY_E)) {
-			LOG("e down\n");
+			LOG("e down");
 		}
-
 		update_keys(&inputs);
 		int display_w,display_h;
 		glfwGetFramebufferSize(window, &display_w, &display_h);
