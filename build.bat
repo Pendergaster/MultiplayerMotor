@@ -14,7 +14,7 @@ if not defined DEV_ENV (
 set DEV_ENV=???
 
 set includes=-I"../external"
-set libs=glfw3.lib opengl32.lib Raknet.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib  Shell32.lib
+set libs=glfw3.lib opengl32.lib BulletCollision.lib BulletDynamics.lib BulletSoftBody.lib LinearMath.lib Raknet.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib  Shell32.lib
 SET CLAGS_DEBUG= -Od -W4 -wd4201 -wd4505
 SET CLAGS_RELEASE= -O2 
 SET BUILD_DIR=bin
