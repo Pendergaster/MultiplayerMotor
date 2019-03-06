@@ -1,7 +1,6 @@
 #ifndef MP_RENDERER
 #define MP_RENDERER
 #define STB_IMAGE_IMPLEMENTATION
-//TODO(pate) add stbimage.h
 #include <stb_image.h>
 #undef STB_IMAGE_IMPLEMENTATION
 #include <glad/include/glad/glad.h>
@@ -223,14 +222,14 @@ static inline void render_cube(Renderer* rend,const glm::vec3& pos,const glm::ve
 
 static void render(Renderer* rend) 
 {
-	// use model shader
+	//TODO(pate) use model shader
 
-	// bind projection and camera matrix
+	//TODO(pate)bind projection and camera matrix
 
-	//	bind model
 	for(RenderData data : rend->renderables) 
 	{
-		// bind model and color
+		//TODO(pate)  bind model and color
+		//
 
 	}
 	rend->renderables.clear();
