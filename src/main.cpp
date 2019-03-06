@@ -6,6 +6,10 @@
 #include <glad/src/glad.c>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+
+#include "cppincludes.h"
+#include "client.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 
 //TODO(pate) add stbimage.h
@@ -14,6 +18,9 @@
 #define SCREENHEIGHT 800
 int main(int argc,char* argv[])
 {
+	Client* connection = new Client("127.0.0.1", 60000, "Loyalisti"); //Create new connection to server;
+	connection->OpenConnection(); //Let attempt to open it;
+
 	(void)argc;(void)argv;
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -31,7 +38,7 @@ int main(int argc,char* argv[])
 
 	while (!glfwWindowShouldClose(window))
 	{
-
+		connection->Update(); //Let's check if server have sent us a packet or two;
 		glfwPollEvents();
 		printf("update!\n");
 		int display_w,display_h;
@@ -41,6 +48,9 @@ int main(int argc,char* argv[])
 		glfwSwapBuffers(window);
 	}
 	glfwTerminate();
+	connection->CloseConnection(); //Close connection to server;
+	delete connection; //Hakai the connecsjioon;
 	printf("bye!\n");
 	return 0;
 }
+
