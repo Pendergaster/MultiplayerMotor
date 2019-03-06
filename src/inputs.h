@@ -36,7 +36,6 @@ enum class Key : unsigned int
 	//max_keys
 };
 
-
 struct Input
 {
 	u32			keys;
@@ -59,8 +58,7 @@ void set_key_down(int key,Input* in)
 void set_key_up(int key,Input* in)
 {
 	int realKey = key - GLFW_KEY_A + 1;
-	if (BETWEEN(0, realKey, 30))
-	{
+	if (BETWEEN(0, realKey, 30)) {
 		BIT_UNSET(in->keys, (1 << (realKey - 1)));
 	}
 }
@@ -79,15 +77,14 @@ void key_callback(GLFWwindow* window, int key, int , int action, int )
 void mouse_callback(GLFWwindow* window, int button, int action, int )
 {
 	Input* in = (Input*)glfwGetWindowUserPointer(window);
-	if(button == GLFW_MOUSE_BUTTON_LEFT)
-	{
-		if(action == GLFW_PRESS)
+	if(button == GLFW_MOUSE_BUTTON_LEFT) {
+		if(action == GLFW_PRESS) {
 			in->mousebuttons[0] = true;
-		else if(action == GLFW_RELEASE)
+		}
+		else if(action == GLFW_RELEASE) {
 			in->mousebuttons[0] = false;
-	}
-	else if(button == GLFW_MOUSE_BUTTON_RIGHT)
-	{
+		}
+	} else if(button == GLFW_MOUSE_BUTTON_RIGHT) {
 		if(action == GLFW_PRESS) {
 			in->mousebuttons[1] = true;
 		}
@@ -125,8 +122,7 @@ void update_keys(Input* in)
 	in->lastkeys = in->keys;
 	in->lastmpos = in->mpos;
 }
-
-//		USER SPACE
+// USER SPACE
 bool key_pressed(Key key)
 {
 	return	BIT_CHECK(g_inputs->keys, (u32)key) && !(BIT_CHECK(g_inputs->lastkeys, (u32)key));	
