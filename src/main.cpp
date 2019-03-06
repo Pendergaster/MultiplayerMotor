@@ -63,7 +63,7 @@ int main(int argc,char* argv[])
 		glm::vec2 mpos = get_mouse_position();
 		printf("update! , %f ,%f ",mpos.x,mpos.y);
 		if(key_pressed(Key::KEY_E)) {
-			LOG("e pressed");
+			LOG("e pressed\n");
 		} else if (key_down(Key::KEY_E)) {
 			LOG("e down\n");
 		}
