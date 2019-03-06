@@ -6,6 +6,15 @@
 #include <glad/src/glad.c>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+
+#include "cppincludes.h"
+#include "client.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+
+//TODO(pate) add stbimage.h
+#undef STB_IMAGE_IMPLEMENTATION
+
 #define SCREENWIDHT 800
 #define SCREENHEIGHT 800
 
@@ -19,6 +28,7 @@ static void glfw_error_callback(int e, const char *d)
 
 GLFWwindow* init_window() 
 {
+
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -36,16 +46,19 @@ GLFWwindow* init_window()
 	return window;
 }
 
-
 int main(int argc,char* argv[])
 {
 	(void)argc;(void)argv;
+	
+	Client* connection = new Client("127.0.0.1", 60000, "Loyalisti"); //Create new connection to server;
+	connection->OpenConnection(); //Let attempt to open it;
 	GLFWwindow* window = init_window();
 	Input inputs;
 	init_inputs(&inputs);
 	glfwSetWindowUserPointer(window,&inputs);
 
 	while (!glfwWindowShouldClose(window)) {
+		connection->Update();
 		glfwPollEvents();
 		glm::vec2 mpos = get_mouse_position();
 		printf("update! , %f ,%f ",mpos.x,mpos.y);
@@ -63,6 +76,9 @@ int main(int argc,char* argv[])
 		glfwSwapBuffers(window);
 	}
 	glfwTerminate();
+	connection->CloseConnection(); //Close connection to server;
+	delete connection; //Hakai the connecsjioon;
 	printf("bye!\n");
 	return 0;
 }
+
