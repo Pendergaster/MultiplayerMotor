@@ -48,7 +48,6 @@ GLFWwindow* init_window()
 int main(int argc,char* argv[])
 {
 	(void)argc;(void)argv;
-	
 	Client* connection = new Client("127.0.0.1", 60000, "Loyalisti"); //Create new connection to server;
 	connection->OpenConnection(); //Let attempt to open it;
 	GLFWwindow* window = init_window();
