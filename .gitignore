@@ -328,5 +328,3 @@ ASALocalRun/
 # ADD HERE CUSTOM
 *.out
 *.exe
-*.dll
-*.lib
