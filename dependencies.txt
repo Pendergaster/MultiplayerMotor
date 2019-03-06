@@ -1,3 +1,4 @@
 opengl 4.1
 glad C/C++ compability
 glm 0.9.9 (stable)
+glfw3 (3.2.1)
