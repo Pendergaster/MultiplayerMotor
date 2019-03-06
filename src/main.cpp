@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 
 #include "cppincludes.h"
-#include "client.h"
+#include "Client.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 
