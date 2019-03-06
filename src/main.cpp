@@ -1,5 +1,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
+#include <bullet/btBulletDynamicsCommon.h>
+#include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <glad/include/glad/glad.h>
@@ -48,6 +51,17 @@ GLFWwindow* init_window()
 int main(int argc,char* argv[])
 {
 	(void)argc;(void)argv;
+
+	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
+	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
+	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
+	btSequentialImpulseConstraintSolver* solver = new  btSequentialImpulseConstraintSolver;
+
+	btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,
+		overlappingPairCache, solver, collisionConfiguration);
+
+	dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
+
 	Client* connection = new Client("127.0.0.1", 60000, "Loyalisti"); //Create new connection to server;
 	connection->OpenConnection(); //Let attempt to open it;
 	GLFWwindow* window = init_window();
