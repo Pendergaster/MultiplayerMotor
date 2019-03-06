@@ -43,7 +43,6 @@ void Client::Update()
 	/*Loads packet from peer*/
 	if ((float)TimeDifference.count() > TimeInterval)
 	{
-		std::cout << "Searching for packets";
 		Delta += chrono::milliseconds((int)TimeInterval);
 		for (Packet = Peer->Receive(); Packet != 0; Packet = Peer->Receive())
 		{
