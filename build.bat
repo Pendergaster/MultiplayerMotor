@@ -23,7 +23,8 @@ IF /I "%1"=="build_debug" (
 		cls
 		pushd %BUILD_DIR%
 		REM 
-		cl %CLAGS_DEBUG% -Z7 -nologo /EHsc /DEBUG /fp:fast ..\src\main.cpp %includes% -D"_ITERATOR_DEBUG_LEVEL 2" /MD /link %libs% -LIBPATH:../libs/debuglibs 
+		cl %CLAGS_DEBUG% -Z7 -nologo /EHsc /fp:fast ..\src\main.cpp %includes% -D_ITERATOR_DEBUG_LEVEL#2 /MDd /link %libs% -LIBPATH:../libs/debuglibs 
+		REM /DEBUG 
 		popd
 		)
 
@@ -31,7 +32,7 @@ IF /I "%1"=="build_release" (
 		cls
 		pushd %BUILD_DIR%
 		REM 
-		cl %CLAGS_RELEASE% -nologo /EHsc /DEBUG /fp:fast ..\src\main.cpp  -D"_ITERATOR_DEBUG_LEVEL 0" %includes% /MD /link %libs% -LIBPATH:../libs/releaselibs 
+		cl %CLAGS_RELEASE% -nologo /EHsc /DEBUG /fp:fast ..\src\main.cpp  -D_ITERATOR_DEBUG_LEVEL#0 %includes% /MD /link %libs% -LIBPATH:../libs/releaselibs 
 		popd
 		)
 
@@ -50,5 +51,15 @@ IF /I "%1"=="run_test" (
 		TestBin\test.exe
 		REM popd
 		)
+
+IF /I "%1"=="build_test" (
+		cls
+		pushd %BUILD_DIR%
+		REM 
+		cl %CLAGS_DEBUG% -Z7 -nologo /EHsc /fp:fast ..\src\maintest.cpp -D_ITERATOR_DEBUG_LEVEL#2 /MD /link %libs% -LIBPATH:../libs/debuglibs
+		REM /DEBUG 
+		popd
+		)
+
 
 ENDLOCAL

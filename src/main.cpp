@@ -54,7 +54,7 @@ int main(int argc,char* argv[])
 	Input inputs;
 	init_inputs(&inputs);
 	glfwSetWindowUserPointer(window,&inputs);
-
+	printf("re %d\n",_ITERATOR_DEBUG_LEVEL );
 	while (!glfwWindowShouldClose(window)) {
 		connection->Update();
 		glfwPollEvents();
