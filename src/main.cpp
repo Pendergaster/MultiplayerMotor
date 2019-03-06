@@ -1,17 +1,19 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
-#include <bullet/btBulletDynamicsCommon.h>
-#include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <glad/include/glad/glad.h>
 #include <glad/src/glad.c>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#if 0
+#include <bullet/btBulletDynamicsCommon.h>
+#include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#endif
 
-#include "cppincludes.h"
+
 #include "Client.h"
+#include "cppincludes.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 
@@ -22,6 +24,7 @@
 #define SCREENHEIGHT 800
 
 #include "inputs.h"
+#include "renderer.h"
 
 static void glfw_error_callback(int e, const char *d)
 {
@@ -51,7 +54,7 @@ GLFWwindow* init_window()
 int main(int argc,char* argv[])
 {
 	(void)argc;(void)argv;
-
+#if 0
 	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
 	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
 	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
@@ -61,13 +64,15 @@ int main(int argc,char* argv[])
 		overlappingPairCache, solver, collisionConfiguration);
 
 	dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
-
+#endif
 	Client* connection = new Client("127.0.0.1", 60000, "Loyalisti"); //Create new connection to server;
 	connection->OpenConnection(); //Let attempt to open it;
 	GLFWwindow* window = init_window();
+
 	Input inputs;
 	init_inputs(&inputs);
 	glfwSetWindowUserPointer(window,&inputs);
+	Renderer renderer = init_renderer();
 	printf("re %d\n",_ITERATOR_DEBUG_LEVEL );
 	while (!glfwWindowShouldClose(window)) {
 		connection->Update();

@@ -23,8 +23,7 @@ IF /I "%1"=="build_debug" (
 		cls
 		pushd %BUILD_DIR%
 		REM 
-		cl %CLAGS_DEBUG% -Z7 -nologo /EHsc /fp:fast ..\src\main.cpp %includes% -D_ITERATOR_DEBUG_LEVEL#2 /MDd /link %libs% -LIBPATH:../libs/debuglibs 
-		REM /DEBUG 
+		cl %CLAGS_DEBUG% -Z7 -nologo /EHsc /fp:fast ..\src\main.cpp %includes% -D_ITERATOR_DEBUG_LEVEL#2 /MDd /link /ignore:4099 %libs% -LIBPATH:../libs/debuglibs 
 		popd
 		)
 

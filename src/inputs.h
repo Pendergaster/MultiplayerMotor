@@ -1,9 +1,9 @@
 #ifndef MP_INPUTS
 #define MP_INPUTS
-#include "utils.h"
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
 
+#include "utils.h"
 enum class Key : unsigned int
 {
 	KEY_A = 1 << 0/*= GLFW_KEY_A*/,
