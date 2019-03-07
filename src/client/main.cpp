@@ -60,7 +60,6 @@ int main(int argc,char* argv[])
 	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
 	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
 	btSequentialImpulseConstraintSolver* solver = new  btSequentialImpulseConstraintSolver;
-
 	btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,
 			overlappingPairCache, solver, collisionConfiguration);
 
@@ -68,6 +67,10 @@ int main(int argc,char* argv[])
 #endif
 	Client* connection = new Client("127.0.0.1", 60000, "Loyalisti"); //Create new connection to server;
 	connection->OpenConnection(); //Let attempt to open it;
+	int a, w, d, s = 0;
+	//TODO(mika) vaihda noista inteistä keyn yhteen inttiin
+	connection->SetVar(PLAYER_INPUT, std::vector<int*>{&w, &a, &s, &d});
+
 	GLFWwindow* window = init_window();
 	Input inputs;
 	init_inputs(&inputs);
@@ -81,14 +84,30 @@ int main(int argc,char* argv[])
 	float deltaAngle = 1.f * deg_to_rad;
 	quaternion rotaxis({90.f,0.f,90.f},deltaAngle);
 	quaternion rotation;
+<<<<<<< HEAD:src/main.cpp
 	while (!glfwWindowShouldClose(window)) {
+=======
+	float l3 = lenght(rotation);
+	printf("AXIS L %f\n",l3);
+
+	while (!glfwWindowShouldClose(window))
+	{
+>>>>>>> 03bae536f3430ba0be860082e23bdc66df6d9974:src/client/main.cpp
 		connection->Update();
 		glfwPollEvents();
-		if(key_pressed(Key::KEY_E)) {
-			LOG("e pressed\n");
-		} else if (key_down(Key::KEY_E)) {
-			LOG("e down");
-		}
+
+		if(key_down(Key::KEY_A)) {  a = 1; }
+		else { a = 0; }
+		if(key_down(Key::KEY_D)) { d = 1; } 
+		else { d = 0; }
+		if(key_down(Key::KEY_W)) { w = 1; } 
+		else { w = 0; }
+		if (key_down(Key::KEY_S)) { s = 1; }
+		else { s = 0; }
+
+		if(key_pressed(Key::KEY_E)) { LOG("e pressed\n"); }
+		else if (key_down(Key::KEY_E)) { LOG("e down"); }
+
 		update_keys(&inputs);
 		int display_w,display_h;
 		glfwGetFramebufferSize(window, &display_w, &display_h);

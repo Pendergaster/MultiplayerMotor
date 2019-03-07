@@ -186,8 +186,8 @@ u32 compile_shader(u32 glenum, const char* source)
 static u32 load_model_shader() 
 {
 	u32 vert,frag,prog;
-	char* vertsrc = load_file("shaders/model.vert",NULL);
-	char* fragsrc = load_file("shaders/model.frag",NULL);
+	char* vertsrc = load_file("../../shaders/model.vert",NULL);
+	char* fragsrc = load_file("../../shaders/model.frag",NULL);
 	ASSERT_MESSAGE(vertsrc && fragsrc,"failed to load shader!");
 	defer{free(vertsrc);};
 	defer{free(fragsrc);};
