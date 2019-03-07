@@ -96,6 +96,9 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 		CheckForVar(PLAYER_INPUT);
 		CONSOLE("Server is requesting input update");
 		break;
+	case CUBE_INFO:
+		ReadCubeInfo(Packet);
+		break;
 	}
 }
 
@@ -227,4 +230,18 @@ void Client::ProcessBallUpdate(RakNet::Packet* packet)
 
 	bs.Read(ballX);
 	bs.Read(ballY);
+}
+
+void Client::ReadCubeInfo(RakNet::Packet* packet)
+{
+	RakNet::BitStream bs(packet->data,packet->length,0);
+	bs.IgnoreBytes(sizeof(RakNet::MessageID));
+	int i = 0;
+	std::vector<btScalar> cubeTransforms;
+	bs.Read(i);
+	for (int x = 0; x < i; x++)
+	{
+		
+	}
+	
 }

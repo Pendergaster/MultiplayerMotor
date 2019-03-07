@@ -16,6 +16,8 @@
 #include <vector>
 #include <chrono>
 
+#include <bullet/btBulletDynamicsCommon.h>
+#include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 //#include "Utility.h"
 
 
@@ -38,6 +40,7 @@ public:
 	void SendBackCoord(RakNet::Packet* P);
 	RakNet::RakString GetUsername() { return RakNet::RakString(username.c_str());}
 	void UsernameChange(std::string* username);
+	void ReadCubeInfo(RakNet::Packet* packet);
 	void CheckForVar(CustomMessages messageID);
 	void SetVar(CustomMessages MessageID, std::vector<string*> Vars);
 	void SetVar(CustomMessages MessageID, std::vector<float*>Vars);

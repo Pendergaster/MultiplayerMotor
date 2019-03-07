@@ -24,11 +24,11 @@ Server::~Server()
 
 void Server::InitBulletWorld()
 {
-	btDefaultCollisionConfiguration* collisionConfiguration =	new btDefaultCollisionConfiguration();
-	btCollisionDispatcher* dispatcher =							new btCollisionDispatcher(collisionConfiguration);
-	btBroadphaseInterface* overlappingPairCache =				new btDbvtBroadphase();
-	btSequentialImpulseConstraintSolver* solver =				new  btSequentialImpulseConstraintSolver;
-	btDiscreteDynamicsWorld* dynamicsWorld =					new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+	collisionConfiguration =	new btDefaultCollisionConfiguration();
+	dispatcher =				new btCollisionDispatcher(collisionConfiguration);
+	overlappingPairCache =		new btDbvtBroadphase();
+	solver =					new  btSequentialImpulseConstraintSolver;
+	dynamicsWorld =				new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
 	dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
 	
@@ -40,13 +40,24 @@ void Server::InitBulletWorld()
 	btRigidBody::btRigidBodyConstructionInfo info(0.0, motion, plane);
 	planerb = new btRigidBody(info);
 
+	btVector3 defaultIntertia(0, 0, 0);
+
 	dynamicsWorld->addRigidBody(planerb);
 
 	for (int x = 0; x < 3; x++) //tehdään cubet mappiin
 	{
 		for (int y = 0; y < 3; y++) //tehdään cubet mappiin
 		{
-			t.setOrigin({x,1,y});
+			t.setOrigin({(float)x,1,(float)y});
+
+			btBoxShape* box = new btBoxShape({ 1,1,1 });
+			box->calculateLocalInertia(1.0f, defaultIntertia);
+			btMotionState* boxmotion = new btDefaultMotionState(t);
+			btRigidBody::btRigidBodyConstructionInfo boxInfo(1.0f, boxmotion, box, defaultIntertia);
+			btRigidBody* newBox = new btRigidBody(boxInfo);
+			newBox->setFriction(0.1f);
+			cubes.push_back(newBox);
+			dynamicsWorld->addRigidBody(newBox);
 		}
 	}
 }
@@ -82,7 +93,14 @@ void Server::ServerUpdate()
 	if ((float)Delta.count() > TimeInterval)
 	{
 		Delta120 += chrono::milliseconds((int)TimeInterval);
+		dynamicsWorld->stepSimulation(1.0f / 120, 10);
 		RequestFromAll(PLAYER_INPUT);
+		btTransform trans;
+		cubes[0]->getMotionState()->getWorldTransform(trans);
+		btVector3 origin = trans.getOrigin();
+
+		printf("%f, %f, %f\n", origin.getX(), origin.getY(), origin.getZ());
+		SendCubeMatrix();
 
 		for (Packet = Peer->Receive(); Packet; Packet = Peer->Receive())
 		{
@@ -196,6 +214,23 @@ void Server::RequestFromAll(CustomMessages Requested)
 {
 	RakNet::BitStream bs;
 	bs.Write((RakNet::MessageID)Requested);
+	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
+}
+
+void Server::SendCubeMatrix()
+{
+	RakNet::BitStream bs;
+	btTransform trans;
+	btVector3 origin;
+	btScalar matrix;
+	bs.Write((RakNet::MessageID)CUBE_INFO);
+	bs.Write(cubes.size());
+	for (btRigidBody* cube : cubes)
+	{
+		cube->getMotionState()->getWorldTransform(trans);
+		trans.getOpenGLMatrix(&matrix);
+		bs.Write(matrix);
+	}
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
 }
 

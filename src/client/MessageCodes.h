@@ -15,6 +15,7 @@ enum CustomMessages
 	PING,
 	PLAYER_INPUT,
 	BALL_UPDATE,
+	CUBE_INFO,
 };
 
 enum Type

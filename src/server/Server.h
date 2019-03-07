@@ -43,6 +43,7 @@ public:
 	void RequestFromAll(CustomMessages var);
 	void SendResponse(RakNet::SystemAddress sys, CustomMessages responseID);
 	void BroadcastVar(CustomMessages Var, RakNet::Packet Packet);
+	void SendCubeMatrix();
 
 	void ReadPlayerInput(RakNet::Packet* packet);
 	void ReadPlayerCoord(RakNet::Packet* packet);

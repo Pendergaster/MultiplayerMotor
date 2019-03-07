@@ -8,8 +8,6 @@
 //#include <glm/glm.hpp>
 #include "math.h"
 #if 0
-#include <bullet/btBulletDynamicsCommon.h>
-#include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #endif
 
 
