@@ -1,9 +1,10 @@
 #ifndef MP_INPUTS
 #define MP_INPUTS
-#include "utils.h"
-#include <glm/glm.hpp>
+//#include <glm/glm.hpp>
+#include "math.h"
 #include <GLFW/glfw3.h>
 
+#include "utils.h"
 enum class Key : unsigned int
 {
 	KEY_A = 1 << 0/*= GLFW_KEY_A*/,
@@ -39,8 +40,8 @@ struct Input
 {
 	u32			keys;
 	u32			lastkeys;
-	glm::vec2	mpos;
-	glm::vec2	lastmpos;
+	vec2	mpos;
+	vec2	lastmpos;
 	bool		mousebuttons[2];
 	bool		lastmousebuttons[2];
 	bool		inputDisabled;
@@ -95,7 +96,7 @@ void mouse_callback(GLFWwindow* window, int button, int action, int )
 void cursor_position_callback(GLFWwindow* window,double xpos , double ypos)
 {
 	Input* in = (Input*)glfwGetWindowUserPointer(window);
-	in->mpos = glm::vec2((float)xpos,(float)ypos);	
+	in->mpos = vec2((float)xpos,(float)ypos);	
 }
 
 static Input* g_inputs = NULL;
@@ -108,8 +109,8 @@ void init_inputs(Input* in)
 {
 	in->keys = 0;
 	in->lastkeys = 0;
-	in->lastmpos = glm::vec2(0,0);
-	in->mpos = glm::vec2(0,0);
+	in->lastmpos = vec2(0,0);
+	in->mpos = vec2(0,0);
 	in->lastmousebuttons[0] = false;
 	in->lastmousebuttons[1] = false;
 	in->mousebuttons[0] = false;
@@ -131,17 +132,17 @@ bool key_down(Key key)
 	return BIT_CHECK(g_inputs->keys,(u32)key);
 }
 
-static glm::vec2 get_mouse_position()
+static vec2 get_mouse_position()
 {
 	return g_inputs->mpos;
 }
 
-static glm::vec2 get_last_mouse_position()
+static vec2 get_last_mouse_position()
 {
 	return g_inputs->lastmpos;
 }
 
-static glm::vec2 get_mouse_movement()
+static vec2 get_mouse_movement()
 {
 	return g_inputs->mpos - g_inputs->lastmpos;
 }
