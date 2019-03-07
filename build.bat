@@ -26,7 +26,7 @@ IF /I "%1"=="build_debug" (
 		cl %CLAGS_DEBUG% -Z7 -nologo /EHsc /fp:fast ..\..\src\client\main.cpp %includes% -D_ITERATOR_DEBUG_LEVEL#2 /MDd /link /ignore:4099 %libs% -LIBPATH:../../libs/debuglibs 
 		popd
 		)
-
+REM TODO(pate) korjaa
 IF /I "%1"=="build_release" (
 		cls
 		pushd %BUILD_DIR%\client\
@@ -46,27 +46,8 @@ IF /I "%1"=="build_server" (
 IF /I "%1"=="run" (
 		cls
 		chdir %~dp0
-		bin\main.exe
+		bin\client\main.exe
 		popd
 		)
-
-REM TestBin\test.exe
-IF /I "%1"=="run_test" (
-		REM chdir %~dp0
-		REM pushd TestBin
-		echo "Running test"
-		TestBin\test.exe
-		REM popd
-		)
-
-IF /I "%1"=="build_test" (
-		cls
-		pushd %BUILD_DIR%
-		REM 
-		cl %CLAGS_DEBUG% -Z7 -nologo /EHsc /fp:fast ..\src\maintest.cpp -D_ITERATOR_DEBUG_LEVEL#2 /MD /link %libs% -LIBPATH:../libs/debuglibs
-		REM /DEBUG 
-		popd
-		)
-
 
 ENDLOCAL
