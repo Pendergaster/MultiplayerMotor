@@ -75,16 +75,22 @@ int main(int argc,char* argv[])
 	Input inputs;
 	init_inputs(&inputs);
 	glfwSetWindowUserPointer(window,&inputs);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); 
 	Renderer renderer = init_renderer();
-	Camera camera;
-	identify(&camera.view);
-	translate(&camera.view, vec3(0.0f, 0.0f, -6.0f)); 
-	perspective(&camera.projection,deg_to_rad*45.0f, 
-			(float)SCREENWIDHT / (float)SCREENHEIGHT, 0.1f, 100.0f);
+	Camera camera = get_camera(
+			{0.f,0.f,-3.f},
+			0,-90,
+			45.f,	
+			(float)SCREENWIDHT / (float)SCREENHEIGHT
+			);
 	float deltaAngle = 1.f * deg_to_rad;
 	quaternion rotaxis({90.f,0.f,90.f},deltaAngle);
 	quaternion rotation;
 	while (!glfwWindowShouldClose(window)) {
+		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+		{
+			break;
+		}
 		connection->Update();
 		glfwPollEvents();
 
@@ -96,6 +102,8 @@ int main(int argc,char* argv[])
 		else { w = 0; }
 		if (key_down(Key::KEY_S)) { s = 1; }
 		else { s = 0; }
+
+		update_camera(&camera);
 
 		if(key_pressed(Key::KEY_E)) { LOG("e pressed\n"); }
 		else if (key_down(Key::KEY_E)) { LOG("e down"); }
@@ -112,6 +120,12 @@ int main(int argc,char* argv[])
 				rotation,
 				//{0,0,0,1.f},
 				{255,255,255,255});
+		render_cube(&renderer,
+				{0,-3.f,0},
+				{10.f,1.f,10.f},
+				{1,0,0,0},
+				//{0,0,0,1.f},
+				{0,0,255,255});
 		render(&renderer,camera);
 		glfwSwapBuffers(window);
 	}
