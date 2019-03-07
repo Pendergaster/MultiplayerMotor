@@ -56,7 +56,6 @@ int main(int argc,char* argv[])
 	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
 	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
 	btSequentialImpulseConstraintSolver* solver = new  btSequentialImpulseConstraintSolver;
-
 	btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,
 		overlappingPairCache, solver, collisionConfiguration);
 
@@ -64,21 +63,32 @@ int main(int argc,char* argv[])
 
 	Client* connection = new Client("127.0.0.1", 60000, "Loyalisti"); //Create new connection to server;
 	connection->OpenConnection(); //Let attempt to open it;
+	int a, w, d, s = 0;
+	//TODO(mika) vaihda noista inteistä keyn yhteen inttiin
+	connection->SetVar(PLAYER_INPUT, std::vector<int*>{&w, &a, &s, &d});
+
 	GLFWwindow* window = init_window();
 	Input inputs;
 	init_inputs(&inputs);
 	glfwSetWindowUserPointer(window,&inputs);
 	printf("re %d\n",_ITERATOR_DEBUG_LEVEL );
-	while (!glfwWindowShouldClose(window)) {
+	while (!glfwWindowShouldClose(window)) 
+	{
 		connection->Update();
 		glfwPollEvents();
 		glm::vec2 mpos = get_mouse_position();
 		(void)mpos;
-		if(key_pressed(Key::KEY_E)) {
-			LOG("e pressed\n");
-		} else if (key_down(Key::KEY_E)) {
-			LOG("e down");
-		}
+
+		/*Handles input that is send to server*/
+		if(key_down(Key::KEY_A)) {  vaihda noista inteistä a = 1; }
+		else { a = 0; }
+		if(key_down(Key::KEY_D)) { d = 1; } 
+		else { d = 0; }
+		if(key_down(Key::KEY_W)) { w = 1; } 
+		else { w = 0; }
+		if (key_down(Key::KEY_S)) { s = 1; }
+		else { s = 0; }
+
 		update_keys(&inputs);
 		int display_w,display_h;
 		glfwGetFramebufferSize(window, &display_w, &display_h);

@@ -55,10 +55,6 @@ void Client::Update()
 
 void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 {
-	if (Packet->data[0] != 146)
-	{
-		std::cout << to_string(Packet->data[0]) << std::endl;
-	}
 	switch (Packet->data[0])
 	{
 	case ID_CONNECTION_REQUEST_ACCEPTED:
