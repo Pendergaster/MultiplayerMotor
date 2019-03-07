@@ -84,7 +84,15 @@ int main(int argc,char* argv[])
 	float deltaAngle = 1.f * deg_to_rad;
 	quaternion rotaxis({90.f,0.f,90.f},deltaAngle);
 	quaternion rotation;
+<<<<<<< HEAD:src/main.cpp
 	while (!glfwWindowShouldClose(window)) {
+=======
+	float l3 = lenght(rotation);
+	printf("AXIS L %f\n",l3);
+
+	while (!glfwWindowShouldClose(window))
+	{
+>>>>>>> 03bae536f3430ba0be860082e23bdc66df6d9974:src/client/main.cpp
 		connection->Update();
 		glfwPollEvents();
 
