@@ -12,10 +12,10 @@ in DATA
 	vec3 frag_pos;
 } frag_in;
 const float shininess = 32.0f;
-const vec3 glight_ambient = vec3(0.2,0.2,0.2);
-const vec3 glight_specular = vec3(0.4,0.4,0.4);
-const vec3 glight_diffuse = vec3(0.6,0.6,0.6);
-const vec3 glight_direction = vec3(0.6,0.6,0.6);
+const vec3 glight_ambient = vec3(0.5,0.5,0.5);
+const vec3 glight_specular = vec3(0.7,0.6,0.6);
+const vec3 glight_diffuse = vec3(0.8,0.6,0.6);
+const vec3 glight_direction = vec3(-0.6,-0.6,0.6);
 
 void calculate_global_light(
 		inout vec3 colors[3],
@@ -47,6 +47,6 @@ void main()
 							vec3(0.7,0.7,0.7),
 							frag_in.normal,
 							viewDir);
-	out_color = vec4(colors[0] * colors[1] * colors[2],1.f);
+	out_color = vec4(colors[0] + colors[1] + colors[2],1.f);
 }
 

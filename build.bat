@@ -45,7 +45,6 @@ IF /I "%1"=="build_server" (
 
 IF /I "%1"=="run" (
 		cls
-		chdir %~dp0
 		bin\client\main.exe
 		popd
 		)

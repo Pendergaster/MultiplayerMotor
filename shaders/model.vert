@@ -17,7 +17,7 @@ out DATA
 
 void main() 
 {
-	vert_out.normal = inNormal;
+	vert_out.normal = normalize(mat3(transpose(inverse(model))) * inNormal);
 	mat4 inv = inverse(view);
 	vert_out.view_pos = vec3(inv[3][0], inv[3][1], inv[3][2]);
 	vert_out.frag_pos = vec3(model * vec4(inPos, 1.0));
