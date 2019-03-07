@@ -80,11 +80,7 @@ int main(int argc,char* argv[])
 			(float)SCREENWIDHT / (float)SCREENHEIGHT, 0.1f, 100.0f);
 	float deltaAngle = 1.f * deg_to_rad;
 	quaternion rotaxis({90.f,0.f,90.f},deltaAngle);
-	float l = lenght(rotaxis);
-	printf("AXIS L %f\n",l);
 	quaternion rotation;
-	float l3 = lenght(rotation);
-	printf("AXIS L %f\n",l3);
 	while (!glfwWindowShouldClose(window)) {
 		connection->Update();
 		glfwPollEvents();
@@ -99,8 +95,6 @@ int main(int argc,char* argv[])
 		glViewport(0, 0, display_w, display_h);
 		//glClear(GL_COLOR_BUFFER_BIT);
 		rotation *= rotaxis;
-		float l = lenght(rotation);
-		printf("%.2f\n",l);
 		render_cube(&renderer,
 				{0,0,0},
 				{1.f,1.f,1.f},

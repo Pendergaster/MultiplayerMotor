@@ -156,12 +156,6 @@ struct quaternion
 		setValue(axis.x() * s, axis.y() * s, axis.z() * s,
 				btCos(_angle * btScalar(0.5)));
 #endif
-
-
-
-
-
-
 		scalar = cosf(theata / 2.f);
 		float s = sinf(theata / 2.f);
 		i = v.x * s;

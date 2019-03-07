@@ -47,6 +47,6 @@ void main()
 							vec3(0.7,0.7,0.7),
 							frag_in.normal,
 							viewDir);
-	out_color = vec4(colors[0] * colors[1] * colors[2],1.f) + vec4(color);
+	out_color = vec4(colors[0] * colors[1] * colors[2],1.f);
 }
 

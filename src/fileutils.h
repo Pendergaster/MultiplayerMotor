@@ -80,8 +80,10 @@ static inline char* load_file(const char* path, size_t* fileSize)
 {
 	size_t  size;
 	char* data = (char*)internal_load_file(path,"rb", &size);
-	data[size]  = '\0';
-	if(fileSize) *fileSize = size;
+	if(data) {
+		data[size]  = '\0';
+		if(fileSize) *fileSize = size;
+	}
 	return data; 
 }
 
