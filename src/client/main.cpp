@@ -78,7 +78,7 @@ int main(int argc,char* argv[])
 	Renderer renderer = init_renderer();
 	Camera camera;
 	identify(&camera.view);
-	translate(&camera.view, vec3(0.0f, 0.0f, -3.0f)); 
+	translate(&camera.view, vec3(0.0f, 0.0f, -6.0f)); 
 	perspective(&camera.projection,deg_to_rad*45.0f, 
 			(float)SCREENWIDHT / (float)SCREENHEIGHT, 0.1f, 100.0f);
 	float deltaAngle = 1.f * deg_to_rad;
