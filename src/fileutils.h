@@ -50,17 +50,24 @@ u8 does_file_exist(const char* path)
 static void* internal_load_file(const char* path,const char* filetype,
 		size_t* fileSize)
 {
-	*fileSize = 0;
 	FILE* fp = fopen(path,filetype);
 	if(fp == NULL ) return NULL;
 	fseek(fp, 0, SEEK_END);
 	size_t len = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
+	rewind(fp);
+	//fseek(fp, 0, SEEK_SET);
 	void* ptrToMem = 0;
-	ptrToMem = malloc(len);
+	ptrToMem = malloc(len + 1);
 	if(!ptrToMem) return NULL;
-	fread(ptrToMem,len,1,fp);
+	size_t readsize = fread(ptrToMem,1,len,fp);
+	if(readsize != len) {
+		// something went wrong
+		free(ptrToMem);
+		ptrToMem = NULL;
+		len = 0;
+	}
 	if(fileSize) *fileSize = len;
+	fclose(fp);
 	return ptrToMem;
 }
 
@@ -71,7 +78,11 @@ static inline void* load_binary_file(char* const path, size_t* fileSize)
 
 static inline char* load_file(const char* path, size_t* fileSize)
 {
-	return (char*)internal_load_file(path,"r", fileSize);
+	size_t  size;
+	char* data = (char*)internal_load_file(path,"rb", &size);
+	data[size]  = '\0';
+	if(fileSize) *fileSize = size;
+	return data; 
 }
 
 #endif //PAKKI_FILESYS

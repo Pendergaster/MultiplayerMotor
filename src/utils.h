@@ -28,7 +28,8 @@ printf(" in file : %s:%d \n", __FILE__, __LINE__);} while(0)
 #define GIGAS(NUM) (NUM * 1000000000)
 
 #define BETWEEN(a,x,b) (a < x && b > x)
-
+#define CONCAT_INTERNAL(x,y) x##y
+#define CONCAT(x,y) CONCAT_INTERNAL(x,y)
 //https://pastebin.com/3YvWQa5c
 template<typename T>
 struct CleanUP {

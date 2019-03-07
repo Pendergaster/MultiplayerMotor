@@ -4,12 +4,17 @@
 #include <stb_image.h>
 #undef STB_IMAGE_IMPLEMENTATION
 #include <glad/include/glad/glad.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp> 
+//#include <glm/glm.hpp>
+//#include <glm/gtc/quaternion.hpp> 
+#include "math.h"
 #include <vector>
 #include "utils.h"
 #include "fileutils.h"
-
+#include "camera.h"
+#define PROJECTIONLOC 1
+#define VIEWLOC 2
+#define MODELLOC 3
+#define COLORLOC 4
 GLenum glCheckError_(const char *file, int line,const char* func = NULL)
 {
 	GLenum errorCode;
@@ -38,6 +43,7 @@ GLenum glCheckError_(const char *file, int line,const char* func = NULL)
 #define GLERRCHECK(func) do{func; glCheckError(#func);}while(0)
 
 struct Color {
+	Color(u8 _r, u8 _g,u8 _b, u8 _a) : r(_r),g(_g),b(_b),a(_a) {}
 	u8 r,g,b,a;
 };
 
@@ -113,7 +119,7 @@ static ModelData load_cube() {
 
 	// position attribute
 	GLERRCHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0));
-	glEnableVertexAttribArray(0);
+	GLERRCHECK(glEnableVertexAttribArray(0));
 	// normal attribute
 	GLERRCHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float))));
 	GLERRCHECK(glEnableVertexAttribArray(1));
@@ -167,7 +173,7 @@ u32 compile_shader(u32 glenum, const char* source)
 		{
 			char* infoLog = (char*)malloc(sizeof(char) * infolen);
 			GLERRCHECK(glGetShaderInfoLog(shader, infolen, NULL, infoLog));
-			LOG("Error compiling shader :\n%s\n", infoLog);
+			LOG("Error compiling shader : %s ", infoLog);
 			free(infoLog);
 			GLERRCHECK(glDeleteShader((GLuint)shader));
 			ABORT_MESSAGE("failed to compile program");
@@ -177,30 +183,36 @@ u32 compile_shader(u32 glenum, const char* source)
 	return shader;
 }
 
-static void load_model_shader() 
+static u32 load_model_shader() 
 {
 	u32 vert,frag,prog;
 	char* vertsrc = load_file("shaders/model.vert",NULL);
 	char* fragsrc = load_file("shaders/model.frag",NULL);
 	ASSERT_MESSAGE(vertsrc && fragsrc,"failed to load shader!");
+	defer{free(vertsrc);};
+	defer{free(fragsrc);};
 	vert = compile_shader(GL_VERTEX_SHADER,vertsrc);
 	frag = compile_shader(GL_FRAGMENT_SHADER,fragsrc);
 	prog = link_shader(vert,frag);
 
+	GLERRCHECK(glUseProgram(prog));
 
+
+	return prog;
 }
 
 struct RenderData {
-	RenderData(Model handle,glm::vec3 pos,glm::vec3 scale,glm::quat ori,Color col) : 
+	RenderData(Model handle,vec3 pos,vec3 scale,quaternion ori,Color col) : 
 		model(handle),position(pos),scale(scale), orientation(ori),color(col){}
-	Model			model;
-	glm::vec3		position;
-	glm::vec3		scale;
-	glm::quat		orientation;
-	Color			color;
+	Model		model;
+	vec3		position;
+	vec3		scale;
+	quaternion	orientation;
+	Color		color;
 };
 
 struct Renderer {
+	u32							modelShader;
 	ModelData					models[(int)Model::MaxModels];
 	std::vector<RenderData>		renderables;
 };
@@ -208,29 +220,54 @@ struct Renderer {
 static Renderer init_renderer() 
 {
 	Renderer rend;
+	LOG("Renderer initing");
+	rend.modelShader = load_model_shader();
+	LOG("Shader loaded initing");
 	rend.models[(int)Model::Cube] = load_cube();
+	glClearColor(0.8f, 0.8f, 0.8f, 1.f);
+	glEnable(GL_MULTISAMPLE);
 	LOG("Renderer inited");
 	return rend;
 }
 
-static inline void render_cube(Renderer* rend,const glm::vec3& pos,const glm::vec3& scale,
-		const glm::quat& orientation) 
+static inline void render_cube(Renderer* rend,const vec3& pos,const vec3& scale,
+		const quaternion& orientation,Color color) 
 {
-	rend->renderables.emplace_back(Model::Cube,pos,scale,orientation);
+	rend->renderables.emplace_back(Model::Cube,pos,scale,orientation,color);
 }
 
-
-static void render(Renderer* rend) 
+static void render(Renderer* rend,const Camera& cam) 
 {
-	//TODO(pate) use model shader
-
-	//TODO(pate)bind projection and camera matrix
-
+	// set up
+	GLERRCHECK(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+	glEnable(GL_DEPTH_TEST);
+	//TODO(pate) check cull face order
+	// glEnable(GL_CULL_FACE); 
+	GLERRCHECK(glUseProgram(rend->modelShader));
+	GLERRCHECK(glUniformMatrix4fv(PROJECTIONLOC, 1, GL_FALSE, (GLfloat*)&cam.projection));
+	GLERRCHECK(glUniformMatrix4fv(VIEWLOC, 1, GL_FALSE, (GLfloat*)&cam.view));
+	
 	for(RenderData data : rend->renderables) 
 	{
 		//TODO(pate)  bind model and color
-		//
-
+		mat4 model;
+		//identify(&model);
+		model *= data.orientation;
+		translate(&model,data.position);
+		scale(&model,data.scale);
+		// bind model
+		GLERRCHECK(glUniformMatrix4fv(MODELLOC, 1, GL_FALSE, (GLfloat*)&model));
+		// convert color to 0 - 1 range float 
+		vec4 color;
+		color.x = data.color.r / 255.f;
+		color.y = data.color.g / 255.f;
+		color.z = data.color.b / 255.f;
+		color.a = data.color.a / 255.f;
+		// bind color
+		GLERRCHECK(glUniform4fv(COLORLOC, 1, (float*)&color));
+		ModelData modeldata = rend->models[(int)data.model];
+		glBindVertexArray(modeldata.vao);
+		GLERRCHECK(glDrawArrays(GL_TRIANGLES, 0, modeldata.numVerts));
 	}
 	rend->renderables.clear();
 }
