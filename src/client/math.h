@@ -49,6 +49,7 @@ struct  vec3
 {
 	vec3() : x(0),y(0),z(0) {}
 	vec3(float _x,float _y,float _z) : x(_x),y(_y),z(_z) {}
+	vec3(float val) : x(val),y(val),z(val) {}
 	union
 	{
 		struct
@@ -101,6 +102,7 @@ struct  vec4
 {
 	vec4() : x(0),y(0),z(0) {}
 	vec4(float _x,float _y,float _z,float _w) : x(_x),y(_y),z(_z),w(_w) {}
+	vec4(const vec3& v,float _w) : x(v.x),y(v.y),z(v.z),w(_w) {}
 
 	union
 	{
@@ -123,7 +125,7 @@ static inline float lenght_fast(const vec3& v);
 static inline vec3 get_scaled(const vec3& v,float scale);
 #define QtoV3(Q) (*((vec3*)(&(Q))))
 
-void normalize(vec3* v);
+static void normalize(vec3* v);
 struct quaternion
 {
 	float scalar,i,j,k;
@@ -277,7 +279,6 @@ static inline vec2 normalized(const vec2& v)
 
 	return vec2 (v.x / l,v.y / l);
 }
-
 
 static inline void normalize(vec3* v)
 {
@@ -792,12 +793,12 @@ static inline void inverse_mat4(mat4* res, mat4* m)
 	template<typename T>
 static inline T max(T lhv,T rhv)
 {
-	return lhv > rhv ? lhv : lhv;	
+	return lhv > rhv ? lhv : rhv;	
 }
 	template<typename T>
 static inline T min(T lhv,T rhv)
 {
-	return lhv < rhv ? lhv : lhv;	
+	return lhv < rhv ? lhv : rhv;	
 }
 //TODO SIMD versions 
 //TODO 2D Math utils

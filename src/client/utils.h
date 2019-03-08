@@ -2,6 +2,7 @@
 #define MP_UTILS
 #include <stdint.h>
 #include <stdio.h>
+#include <assert.h>
 
 typedef uint64_t	u64;
 typedef uint32_t	u32;

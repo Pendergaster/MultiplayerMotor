@@ -4,29 +4,16 @@
 #include <stdlib.h>
 #include <glad/include/glad/glad.h>
 #include <glad/src/glad.c>
-//#include <GLFW/glfw3.h>
-//#include <glm/glm.hpp>
+#include <GLFW/glfw3.h>
 #include "math.h"
-#if 0
-#endif
-
-
 #include "Client.h"
 #include "cppincludes.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-
-//TODO(pate) add stbimage.h
-#undef STB_IMAGE_IMPLEMENTATION
-
-#define SCREENWIDHT 800
-#define SCREENHEIGHT 800
 #include "inputs.h"
 #include "renderer.h"
 #include "camera.h"
 
-static void glfw_error_callback(int e, const char *d)
-{
+static void glfw_error_callback(int e, const char *d) {
 	printf("Error %d: %s\n", e, d);
 }
 
@@ -53,7 +40,7 @@ GLFWwindow* init_window()
 int main(int argc,char* argv[])
 {
 	(void)argc;(void)argv;
-#if 0
+#if 1
 	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
 	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
 	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
