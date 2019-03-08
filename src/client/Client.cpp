@@ -241,7 +241,7 @@ void Client::ReadCubeInfo(RakNet::Packet* packet)
 	bs.Read(i);
 	for (int x = 0; x < i; x++)
 	{
-		
+		bs.Read(cubeTransforms[x]);
 	}
-	
+	printf("%i nibbaa löydetty", i);
 }

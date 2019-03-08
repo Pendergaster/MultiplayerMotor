@@ -99,7 +99,7 @@ void Server::ServerUpdate()
 		cubes[0]->getMotionState()->getWorldTransform(trans);
 		btVector3 origin = trans.getOrigin();
 
-		printf("%f, %f, %f\n", origin.getX(), origin.getY(), origin.getZ());
+		//printf("%f, %f, %f\n", origin.getX(), origin.getY(), origin.getZ());
 		SendCubeMatrix();
 
 		for (Packet = Peer->Receive(); Packet; Packet = Peer->Receive())
@@ -225,9 +225,9 @@ void Server::SendCubeMatrix()
 	btScalar matrix;
 	bs.Write((RakNet::MessageID)CUBE_INFO);
 	bs.Write(cubes.size());
-	for (btRigidBody* cube : cubes)
+	for (int i; i < cubes.size(); i++)
 	{
-		cube->getMotionState()->getWorldTransform(trans);
+		cubes[i]->getMotionState()->getWorldTransform(trans);
 		trans.getOpenGLMatrix(&matrix);
 		bs.Write(matrix);
 	}
