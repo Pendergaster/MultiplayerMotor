@@ -40,11 +40,13 @@ public:
 	void SendBackCoord(RakNet::Packet* P);
 	RakNet::RakString GetUsername() { return RakNet::RakString(username.c_str());}
 	void UsernameChange(std::string* username);
-	void ReadCubeInfo(RakNet::Packet* packet);
 	void CheckForVar(CustomMessages messageID);
 	void SetVar(CustomMessages MessageID, std::vector<string*> Vars);
 	void SetVar(CustomMessages MessageID, std::vector<float*>Vars);
 	void SetVar(CustomMessages MessageID, std::vector<int*>Vars);
+	void ReadBulk(RakNet::Packet* packet);
+	void ReadCubeInfo(RakNet::BitStream* bs);
+	void ReadPlayerInfo(RakNet::BitStream* bs);
 
 /*PRIVATE FUNCTIONS*/
 private:
@@ -65,8 +67,11 @@ public:
 	vector<MessageType> registeredServerValues;
 	std::thread BackupThread;
 
-	float ballX;
-	float ballY;
+	std::vector<btVector3> cubePos;
+	std::vector<btQuaternion> cubeRot;
+
+	std::vector<btVector3> playerPos;
+	std::vector<btQuaternion> playerRot;
 /*PRIVATE VARIABLES*/
 private:
 
@@ -74,7 +79,7 @@ private:
 	RakNet::RakPeerInterface* Peer = RakNet::RakPeerInterface::GetInstance();
 	RakNet::Packet* Packet;
 	RakNet::SocketDescriptor* SD = new RakNet::SocketDescriptor(0,0);
-
+		
 	std::chrono::system_clock::time_point Delta;
 	float TimeInterval;
 };

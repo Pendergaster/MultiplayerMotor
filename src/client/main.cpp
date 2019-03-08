@@ -99,6 +99,23 @@ int main(int argc,char* argv[])
 		glViewport(0, 0, display_w, display_h);
 		//glClear(GL_COLOR_BUFFER_BIT);
 		rotation *= rotaxis;
+
+		/*Test of network handled cubes*/
+		for (int i = 0; i < connection->cubePos.size(); i++)
+		{
+			vec3 pos = vec3(connection->cubePos[i].getX(),connection->cubePos[i].getY(),connection->cubePos[i].getZ());
+			vec3 rots = vec3(connection->cubeRot[i].getX(),connection->cubeRot[i].getY(),connection->cubeRot[i].getZ());
+			quaternion rot = quaternion(rots, connection->cubeRot[i].getW());
+			render_cube(&renderer, pos, 1, rot, {255,0,0,255});
+		}
+		for (int i = 0; i < connection->playerPos.size(); i++)
+		{
+			vec3 pos = vec3(connection->playerPos[i].getX(),connection->playerPos[i].getY(),connection->playerPos[i].getZ());
+			vec3 rots = vec3(connection->playerRot[i].getX(),connection->playerRot[i].getY(),connection->playerRot[i].getZ());
+			quaternion rot = quaternion(rots, connection->playerRot[i].getW());
+			render_cube(&renderer, pos, 2, rot, {255,255,0,255});
+		}
+		/*End of the test*/
 		render_cube(&renderer,
 				{0,0,0},
 				{1.f,1.f,1.f},

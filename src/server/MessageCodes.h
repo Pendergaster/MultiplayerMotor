@@ -17,6 +17,10 @@ enum CustomMessages
 	PLAYER_INPUT,
 	BALL_UPDATE,
 	CUBE_INFO,
+	READ_BULK,
+	WRITE_BULK,
+	PLAYER_INFO,
+	FLOOR,
 };
 
 enum Type

@@ -62,6 +62,27 @@ void Server::InitBulletWorld()
 	}
 }
 
+void Server::AddPlayerCube(std::string name)
+{
+	btVector3 defaultIntertia(0, 0, 0);
+
+	btBoxShape* box = new btBoxShape({ 2,2,2 });
+	box->calculateLocalInertia(1.0f, defaultIntertia);
+
+	btTransform t;
+	t.setIdentity();
+	t.setOrigin({0,0,0});
+
+	btMotionState* boxmotion = new btDefaultMotionState(t);
+	btRigidBody::btRigidBodyConstructionInfo boxInfo(1.0f, boxmotion, box, defaultIntertia);
+	btRigidBody* newBox = new btRigidBody(boxInfo);
+	newBox->setFriction(0.1f);
+	players.size();
+	players.push_back(newBox);
+	slots.push_back(name);
+	dynamicsWorld->addRigidBody(newBox);
+}
+
 void Server::ServerStart()
 {
 	Peer = RakPeerInterface::GetInstance();
@@ -95,12 +116,9 @@ void Server::ServerUpdate()
 		Delta120 += chrono::milliseconds((int)TimeInterval);
 		dynamicsWorld->stepSimulation(1.0f / 120, 10);
 		RequestFromAll(PLAYER_INPUT);
-		btTransform trans;
-		cubes[0]->getMotionState()->getWorldTransform(trans);
-		btVector3 origin = trans.getOrigin();
 
-		//printf("%f, %f, %f\n", origin.getX(), origin.getY(), origin.getZ());
-		SendCubeMatrix();
+		//SendCubeInfo();
+		WriteBulk();
 
 		for (Packet = Peer->Receive(); Packet; Packet = Peer->Receive())
 		{
@@ -125,6 +143,7 @@ void Server::CheckPacket(const RakNet::Packet& P)
 		else 
 		{
 			SendResponse(Packet->systemAddress, LOGIN_ACCEPTED);
+			AddPlayerCube(Result);
 			CONSOLE(Packet->guid.ToString() << " gave an username " << Result);
 		}
 		break;
@@ -137,6 +156,9 @@ void Server::CheckPacket(const RakNet::Packet& P)
 		break;
 	case PLAYER_INPUT:
 		ReadPlayerInput(Packet);
+		break;
+	case READ_BULK:
+		ReadBulk(Packet);
 		break;
 	}
 }
@@ -177,6 +199,18 @@ void Server::ReadPlayerInput(RakNet::Packet* packet)
 	bs.Read(a);
 	bs.Read(s);
 	bs.Read(d);
+	if (players.size() != 0)
+	{
+		std::string target = Connections->FindUsername(packet->guid.ToString());
+		for (int i = 0; i < players.size(); i++)
+		{
+			if (slots[i] == target)
+			{
+				players[i]->activate(true);
+				players[i]->applyCentralForce({ (float)((a-d)*20),0,(float)((w-s)*20) });
+			}
+		}
+	}
 	//TODO(mika) handlaa inputit;
 	//printf("w: %i, a: %i, s: %i, d: %i, from: %s\n",w,a,s,d,packet->guid.ToString());
 }
@@ -217,19 +251,64 @@ void Server::RequestFromAll(CustomMessages Requested)
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
 }
 
-void Server::SendCubeMatrix()
+void Server::SendCubeInfo()
 {
 	RakNet::BitStream bs;
 	btTransform trans;
-	btVector3 origin;
-	btScalar matrix;
 	bs.Write((RakNet::MessageID)CUBE_INFO);
-	bs.Write(cubes.size());
-	for (int i; i < cubes.size(); i++)
+	int size = cubes.size();
+	bs.Write(size);
+	for (int i = 0; i < cubes.size(); i++)
 	{
 		cubes[i]->getMotionState()->getWorldTransform(trans);
-		trans.getOpenGLMatrix(&matrix);
-		bs.Write(matrix);
+		bs.Write(trans.getOrigin());
+		bs.Write(trans.getRotation());
+		if (i == 2)
+		{
+			trans.getOrigin();
+			printf("y force: %f\n", trans.getOrigin().getY());
+		}
+	}
+	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
+}
+
+void Server::ReadBulk(RakNet::Packet* packet)
+{
+	
+}
+
+void Server::WriteBulk()
+{
+	RakNet::BitStream bs;
+	btTransform trans;
+
+	bs.Write((RakNet::MessageID)READ_BULK);
+	//adding cubeinfo data to packet;
+
+	if (cubes.size() != 0)
+	{
+		bs.Write((RakNet::MessageID)CUBE_INFO);
+		int size = cubes.size();
+		bs.Write(size);
+		for (int i = 0; i < cubes.size(); i++)
+		{
+			cubes[i]->getMotionState()->getWorldTransform(trans);
+			bs.Write(trans.getOrigin());
+			bs.Write(trans.getRotation());
+		}
+	}
+
+	if (players.size() != 0)
+	{
+		bs.Write((RakNet::MessageID)PLAYER_INFO);
+		int size = players.size();
+		bs.Write(size);
+		for (int i = 0; i < players.size(); i++)
+		{
+			players[i]->getMotionState()->getWorldTransform(trans);
+			bs.Write(trans.getOrigin());
+			bs.Write(trans.getRotation());
+		}
 	}
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
 }
