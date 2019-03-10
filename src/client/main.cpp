@@ -6,13 +6,15 @@
 #include <glad/src/glad.c>
 #include <GLFW/glfw3.h>
 #include "math.h"
+#define MIKA 0
+#if MIKA
 #include "Client.h"
 #include "cppincludes.h"
-
+#endif
 #include "inputs.h"
 #include "renderer.h"
 #include "camera.h"
-
+#include "game.h"
 static void glfw_error_callback(int e, const char *d) {
 	printf("Error %d: %s\n", e, d);
 }
@@ -40,7 +42,7 @@ GLFWwindow* init_window()
 int main(int argc,char* argv[])
 {
 	(void)argc;(void)argv;
-#if 1
+#if MIKA
 	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
 	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
 	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
@@ -49,13 +51,13 @@ int main(int argc,char* argv[])
 			overlappingPairCache, solver, collisionConfiguration);
 
 	dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
-#endif
 	Client* connection = new Client("127.0.0.1", 60000, "Loyalisti"); //Create new connection to server;
 	connection->OpenConnection(); //Let attempt to open it;
 	int a, w, d, s = 0;
 	//TODO(mika) vaihda noista inteistä keyn yhteen inttiin
 	connection->SetVar(PLAYER_INPUT, std::vector<int*>{&w, &a, &s, &d});
 
+#endif
 	GLFWwindow* window = init_window();
 	Input inputs;
 	init_inputs(&inputs);
@@ -76,8 +78,10 @@ int main(int argc,char* argv[])
 		{
 			break;
 		}
-		connection->Update();
+
 		glfwPollEvents();
+#if MIKA
+		connection->Update();
 
 		if(key_down(Key::KEY_A)) {  a = 1; }
 		else { a = 0; }
@@ -88,6 +92,7 @@ int main(int argc,char* argv[])
 		if (key_down(Key::KEY_S)) { s = 1; }
 		else { s = 0; }
 
+#endif
 		update_camera(&camera);
 
 		if(key_pressed(Key::KEY_E)) { LOG("e pressed\n"); }
@@ -101,6 +106,8 @@ int main(int argc,char* argv[])
 		rotation *= rotaxis;
 
 		/*Test of network handled cubes*/
+
+#if MIKA
 		for (int i = 0; i < connection->cubePos.size(); i++)
 		{
 			vec3 pos = vec3(connection->cubePos[i].getX(),connection->cubePos[i].getY(),connection->cubePos[i].getZ());
@@ -115,6 +122,8 @@ int main(int argc,char* argv[])
 			quaternion rot = quaternion(rots, connection->playerRot[i].getW());
 			render_cube(&renderer, pos, 2, rot, {255,255,0,255});
 		}
+
+#endif
 		/*End of the test*/
 		render_cube(&renderer,
 				{0,0,0},
@@ -132,8 +141,10 @@ int main(int argc,char* argv[])
 		glfwSwapBuffers(window);
 	}
 	glfwTerminate();
+#if MIKA
 	connection->CloseConnection(); //Close connection to server;
 	delete connection; //Hakai the connecsjioon;
+#endif
 	printf("bye!\n");
 	return 0;
 }
