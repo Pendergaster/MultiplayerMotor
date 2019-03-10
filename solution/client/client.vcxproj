@@ -130,9 +130,11 @@
   <ItemGroup>
     <ClInclude Include="..\..\src\client\Client.h" />
     <ClInclude Include="..\..\src\client\cppincludes.h" />
+    <ClInclude Include="..\..\src\client\game.h" />
     <ClInclude Include="..\..\src\client\inputs.h" />
     <ClInclude Include="..\..\src\client\MessageCodes.h" />
     <ClInclude Include="..\..\src\client\renderer.h" />
+    <ClInclude Include="..\..\src\client\tiny_obj_loader.h" />
     <ClInclude Include="..\..\src\client\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -6,7 +6,7 @@
 #include <glad/src/glad.c>
 #include <GLFW/glfw3.h>
 #include "math.h"
-#define MIKA 0
+#define MIKA 1
 #if MIKA
 #include "Client.h"
 #include "cppincludes.h"
@@ -92,13 +92,13 @@ int main(int argc,char* argv[])
 		if (key_down(Key::KEY_S)) { s = 1; }
 		else { s = 0; }
 
-#endif
 		update_camera(&camera);
 
 		if (connection->playerPos.size() > connection->playerSlot)
 		{
 			camera.position = vec3(connection->playerPos[connection->playerSlot].getX(), connection->playerPos[connection->playerSlot].getY()+6,connection->playerPos[connection->playerSlot].getZ());
 		}
+#endif
 
 		if(key_pressed(Key::KEY_E)) { LOG("e pressed\n"); }
 		else if (key_down(Key::KEY_E)) { LOG("e down"); }
