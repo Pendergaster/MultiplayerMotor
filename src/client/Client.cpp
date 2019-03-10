@@ -94,10 +94,12 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 		break;
 	case PLAYER_INPUT:
 		CheckForVar(PLAYER_INPUT);
-		CONSOLE("Server is requesting input update");
 		break;
 	case CUBE_INFO:
-		ReadCubeInfo(Packet);
+		//ReadCubeInfo(Packet);
+		break;
+	case READ_BULK:
+		ReadBulk(Packet);
 		break;
 	}
 }
@@ -228,20 +230,54 @@ void Client::ProcessBallUpdate(RakNet::Packet* packet)
 	RakNet::BitStream bs(packet->data,packet->length,0);
 	bs.IgnoreBytes(sizeof(RakNet::MessageID));
 
-	bs.Read(ballX);
-	bs.Read(ballY);
 }
 
-void Client::ReadCubeInfo(RakNet::Packet* packet)
+void Client::ReadCubeInfo(BitStream* bs)
+{
+	int i = 0;
+	bs->Read(i);
+	cubePos = vector<btVector3>(i);
+	cubeRot = vector<btQuaternion>(i);
+	for (int x = 0; x < i; x++)
+	{
+		bs->Read(cubePos[x]);
+		bs->Read(cubeRot[x]);
+	}
+}
+
+void Client::ReadPlayerInfo(RakNet::BitStream* bs)
+{
+	int i = 0;
+	bs->Read(i);
+	playerPos = vector<btVector3>(i);
+	playerRot = vector<btQuaternion>(i);
+	for (int x = 0; x < i; x++)
+	{
+		bs->Read(playerPos[x]);
+		bs->Read(playerRot[x]);
+	}
+}
+
+void Client::ReadBulk(RakNet::Packet* packet)
 {
 	RakNet::BitStream bs(packet->data,packet->length,0);
 	bs.IgnoreBytes(sizeof(RakNet::MessageID));
-	int i = 0;
-	std::vector<btScalar> cubeTransforms;
-	bs.Read(i);
-	for (int x = 0; x < i; x++)
+	RakNet::BitSize_t UsedData = 0;
+	RakNet::MessageID ID;
+	while (bs.GetNumberOfUnreadBits() != 0)
 	{
-		bs.Read(cubeTransforms[x]);
+		bs.Read(ID);
+		switch (ID)
+		{
+		case CUBE_INFO:
+			ReadCubeInfo(&bs);
+			break;
+		case PLAYER_INFO:
+			ReadPlayerInfo(&bs);
+			break;
+		default:
+			return;
+			break;
+		}
 	}
-	printf("%i nibbaa löydetty", i);
 }

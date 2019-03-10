@@ -43,7 +43,10 @@ public:
 	void RequestFromAll(CustomMessages var);
 	void SendResponse(RakNet::SystemAddress sys, CustomMessages responseID);
 	void BroadcastVar(CustomMessages Var, RakNet::Packet Packet);
-	void SendCubeMatrix();
+	void SendCubeInfo();
+	void ReadBulk(RakNet::Packet* packet);
+	void WriteBulk();
+	void AddPlayerCube(std::string name);
 
 	void ReadPlayerInput(RakNet::Packet* packet);
 	void ReadPlayerCoord(RakNet::Packet* packet);
@@ -71,6 +74,8 @@ private:
 
 	std::vector<btRigidBody*> cubes;
 	btRigidBody* planerb;
+	std::vector<btRigidBody*> players;
+	std::vector<std::string> slots;
 
 	btDefaultCollisionConfiguration* collisionConfiguration;
 	btCollisionDispatcher * dispatcher;
