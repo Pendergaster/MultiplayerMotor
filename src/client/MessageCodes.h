@@ -20,6 +20,7 @@ enum CustomMessages
 	WRITE_BULK,
 	PLAYER_INFO,
 	FLOOR,
+	PLAYER_SLOT,
 };
 
 enum Type

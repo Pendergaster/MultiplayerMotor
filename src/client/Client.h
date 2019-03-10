@@ -40,6 +40,7 @@ public:
 	void SendBackCoord(RakNet::Packet* P);
 	RakNet::RakString GetUsername() { return RakNet::RakString(username.c_str());}
 	void UsernameChange(std::string* username);
+	void ReadPlayerSlot(RakNet::Packet* packet);
 	void CheckForVar(CustomMessages messageID);
 	void SetVar(CustomMessages MessageID, std::vector<string*> Vars);
 	void SetVar(CustomMessages MessageID, std::vector<float*>Vars);
@@ -72,6 +73,7 @@ public:
 
 	std::vector<btVector3> playerPos;
 	std::vector<btQuaternion> playerRot;
+	int playerSlot;
 /*PRIVATE VARIABLES*/
 private:
 

@@ -90,6 +90,11 @@ int main(int argc,char* argv[])
 
 		update_camera(&camera);
 
+		if (connection->playerPos.size() > connection->playerSlot)
+		{
+			camera.position = vec3(connection->playerPos[connection->playerSlot].getX(), connection->playerPos[connection->playerSlot].getY()+6,connection->playerPos[connection->playerSlot].getZ());
+		}
+
 		if(key_pressed(Key::KEY_E)) { LOG("e pressed\n"); }
 		else if (key_down(Key::KEY_E)) { LOG("e down"); }
 
@@ -113,6 +118,10 @@ int main(int argc,char* argv[])
 			vec3 pos = vec3(connection->playerPos[i].getX(),connection->playerPos[i].getY(),connection->playerPos[i].getZ());
 			vec3 rots = vec3(connection->playerRot[i].getX(),connection->playerRot[i].getY(),connection->playerRot[i].getZ());
 			quaternion rot = quaternion(rots, connection->playerRot[i].getW());
+			if (i == connection->playerSlot)
+			{
+				printf("%f , %f, %f \n", pos.x, pos.y, pos.z);
+			}
 			render_cube(&renderer, pos, 2, rot, {255,255,0,255});
 		}
 		/*End of the test*/
