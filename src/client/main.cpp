@@ -65,7 +65,7 @@ int main(int argc,char* argv[])
 	Camera camera = get_camera(
 			{0.f,0.f,-3.f},
 			0,-90,
-			45.f,	
+			90.f,	
 			(float)SCREENWIDHT / (float)SCREENHEIGHT
 			);
 	float deltaAngle = 1.f * deg_to_rad;

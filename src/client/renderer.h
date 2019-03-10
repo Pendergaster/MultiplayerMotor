@@ -1,8 +1,13 @@
 #ifndef MP_RENDERER
 #define MP_RENDERER
 #define STB_IMAGE_IMPLEMENTATION
+#include <glm_deprecated/glm.hpp>
+#include <glm_deprecated/gtc/matrix_transform.hpp>
 #include <stb_image.h>
 #undef STB_IMAGE_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+#undef TINYOBJLOADER_IMPLEMENTATION
 #include <glad/include/glad/glad.h>
 //#include <glm/glm.hpp>
 //#include <glm/gtc/quaternion.hpp> 
@@ -16,10 +21,13 @@
 #define MODELLOC 3
 #define COLORLOC 4
 #define TEXTURELOC 5
+#define SHADOWMATRIXLOC 8
+#define SHADOWSPLITLOC 12
+#define SHADOWSAMPLERLOC 13
 #define SCREENWIDHT 800
 #define SCREENHEIGHT 800
 
-const vec3 glight_direction = vec3(0.2,-0.6,0);
+const vec3 glight_direction = vec3(-2.f,-4.f,0);
 GLenum glCheckError_(const char *file, int line,const char* func = NULL)
 {
 	GLenum errorCode;
@@ -60,9 +68,50 @@ enum class Model : i32
 	Cube = 0,
 	MaxModels
 };
+struct vertexdata{
+	vec3 pos,normal;
+};
+void load_obj(const char* path,std::vector<vertexdata>* buffer) {
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path)) {
+		ABORT_MESSAGE("Failed to load model!! %s , %s",warn.c_str(),err.c_str());
+	}
+
+	for (const tinyobj::shape_t& shape : shapes) 
+	{
+		for (const auto& index : shape.mesh.indices) 
+		{
+			vertexdata vertex = {};
+
+			vertex.pos = {
+				attrib.vertices[3 * index.vertex_index + 0],
+				attrib.vertices[3 * index.vertex_index + 1],
+				attrib.vertices[3 * index.vertex_index + 2]
+			};
+
+			vertex.normal = {
+				attrib.normals[3 * index.normal_index + 0],
+				attrib.normals[3 * index.normal_index + 1],
+				attrib.normals[3 * index.normal_index + 2],
+			};
+#if 0
+			vertex.uv = {
+				attrib.texcoords[2 * index.texcoord_index + 0],
+				1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+			};
+#endif
+			buffer->push_back(vertex);
+		}
+	}
+}
 
 static ModelData load_cube() {
 	ModelData cube;
+#if 0
 	float vertices[] = {
 		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
 		0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -106,7 +155,6 @@ static ModelData load_cube() {
 		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
 		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 	};
-
 	// first, configure the cube's VAO (and cube.vertbuff)
 	glGenVertexArrays(1, &cube.vao);
 
@@ -127,6 +175,31 @@ static ModelData load_cube() {
 	GLERRCHECK(glEnableVertexAttribArray(1));
 	GLERRCHECK(glBindVertexArray(0));
 	cube.numVerts = sizeof vertices / (sizeof(float) * 6);
+#else 
+	std::vector<vertexdata> d;
+	load_obj("models/Cube.obj",&d);
+	// first, configure the cube's VAO (and cube.vertbuff)
+	glGenVertexArrays(1, &cube.vao);
+
+	GLERRCHECK(glGenVertexArrays(1, &cube.vao));
+
+	GLERRCHECK(glGenBuffers(1, &cube.vertbuff));
+
+	GLERRCHECK(glBindBuffer(GL_ARRAY_BUFFER, cube.vertbuff));
+	GLERRCHECK(glBufferData(GL_ARRAY_BUFFER, sizeof(vertexdata) * d.size(), d.data(), GL_STATIC_DRAW));
+
+	GLERRCHECK(glBindVertexArray(cube.vao));
+
+	// position attribute
+	GLERRCHECK(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0));
+	GLERRCHECK(glEnableVertexAttribArray(0));
+	// normal attribute
+	GLERRCHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float))));
+	GLERRCHECK(glEnableVertexAttribArray(1));
+	GLERRCHECK(glBindVertexArray(0));
+	cube.numVerts = d.size();//sizeof vertices / (sizeof(float) * 6);
+
+#endif
 	return cube;
 }
 
@@ -227,7 +300,7 @@ struct FrameTexture
 	int		attachments;
 };
 
-enum FrameBufferAttacment : int
+enum FrameBuffetAttachment : int
 {
 	None = 1 << 0,
 	ColorAttch = 1 << 1,
@@ -238,7 +311,7 @@ enum FrameBufferAttacment : int
 static inline FrameTexture create_depth_texture(u32 width,u32 height)
 {
 	FrameTexture ret;
-	ret.attachments = FrameBufferAttacment::DepthAttch;
+	ret.attachments = FrameBuffetAttachment::DepthAttch;
 	ret.textureHeight = height;
 	ret.textureWidth = width;
 	GLERRCHECK(glGenFramebuffers(1, &ret.buffer));
@@ -272,10 +345,10 @@ static inline FrameTexture create_new_frameTexture(u32 width,u32 height,GLenum a
 	GLERRCHECK(glBindFramebuffer(GL_FRAMEBUFFER,ret.buffer));
 	GLERRCHECK(glGenTextures(1,&ret.texture));
 	GLenum texturetype = 0;
-	texturetype = BIT_CHECK(type,FrameBufferAttacment::MultisampleAttch) ? 
+	texturetype = BIT_CHECK(type,FrameBuffetAttachment::MultisampleAttch) ? 
 		GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D; 
 	GLERRCHECK(glBindTexture(texturetype,ret.texture));
-	if(BIT_CHECK(type,FrameBufferAttacment::MultisampleAttch)) {
+	if(BIT_CHECK(type,FrameBuffetAttachment::MultisampleAttch)) {
 		GLERRCHECK(glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, width, height, GL_TRUE));
 	} else {
 		GLERRCHECK(glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,NULL));
@@ -284,12 +357,12 @@ static inline FrameTexture create_new_frameTexture(u32 width,u32 height,GLenum a
 	GLERRCHECK(glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR));
 	GLERRCHECK(glBindTexture(texturetype,0));
 	GLERRCHECK(glFramebufferTexture2D(GL_FRAMEBUFFER,attachment,texturetype,ret.texture,0));
-	if(type != FrameBufferAttacment::DepthAttch && BIT_CHECK(type,FrameBufferAttacment::DepthAttch))
+	if(type != FrameBuffetAttachment::DepthAttch && BIT_CHECK(type,FrameBuffetAttachment::DepthAttch))
 	{
 		u32 rbo = 0;
 		GLERRCHECK(glGenRenderbuffers(1,&rbo));
 		GLERRCHECK(glBindRenderbuffer(GL_RENDERBUFFER,rbo));
-		if(BIT_CHECK(type,FrameBufferAttacment::MultisampleAttch)) {
+		if(BIT_CHECK(type,FrameBuffetAttachment::MultisampleAttch)) {
 			GLERRCHECK(glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4,
 						GL_DEPTH24_STENCIL8, width, height));  
 		} else {
@@ -315,14 +388,14 @@ static inline void set_and_clear_frameTexture(const FrameTexture& frameTex)
 	GLERRCHECK(glBindFramebuffer(GL_FRAMEBUFFER,frameTex.buffer));
 	GLERRCHECK(glViewport(0, 0, frameTex.textureWidth, frameTex.textureHeight));
 	glClearColor(0.f,0.f,0.f,1.f);
-	if(BIT_CHECK(frameTex.attachments,FrameBufferAttacment::DepthAttch) && 
-			BIT_CHECK(frameTex.attachments,FrameBufferAttacment::ColorAttch)  ) {
+	if(BIT_CHECK(frameTex.attachments,FrameBuffetAttachment::DepthAttch) && 
+			BIT_CHECK(frameTex.attachments,FrameBuffetAttachment::ColorAttch)  ) {
 		GLERRCHECK(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 	}
-	else if ( FrameBufferAttacment::DepthAttch == frameTex.attachments ) {
+	else if ( FrameBuffetAttachment::DepthAttch == frameTex.attachments ) {
 		GLERRCHECK(glClear(GL_DEPTH_BUFFER_BIT));
 	}
-	else if ( FrameBufferAttacment::ColorAttch == frameTex.attachments) {
+	else if ( FrameBuffetAttachment::ColorAttch == frameTex.attachments) {
 		GLERRCHECK(glClear(GL_COLOR_BUFFER_BIT));
 	}
 	else {
@@ -357,6 +430,7 @@ struct SkyRenderer {
 struct ShadowRenderer {
 	FrameTexture	cascades[NUM_CASCADES];
 	u32				shader;
+	mat4			matrixes[NUM_CASCADES];
 	float			splitdistances[NUM_CASCADES];
 };
 
@@ -462,7 +536,7 @@ static ShadowRenderer get_shadow_renderer()
 {
 	ShadowRenderer rend;
 	for(u32 i = 0; i < NUM_CASCADES;i++) {
-		rend.cascades[i] = create_depth_texture(4096,4096);
+		rend.cascades[i] = create_depth_texture(2048,2048);
 	}
 	rend.shader = load_shader("shaders/shadowvert.glsl", "shaders/shadowfrag.glsl");
 	return rend;
@@ -479,7 +553,7 @@ static Renderer init_renderer()
 	rend.models[(int)Model::Cube] = load_cube();
 	// load shadow renderer
 	rend.shadowrenderer = get_shadow_renderer();
-	glClearColor(0.8f, 0.8f, 0.8f, 1.f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.f);
 	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_DEPTH_TEST);
 	LOG("Renderer inited");
@@ -492,11 +566,11 @@ static inline void render_cube(Renderer* rend,const vec3& pos,const vec3& scale,
 	rend->renderables.emplace_back(Model::Cube,pos,scale,orientation,color);
 }
 
-static void render_shadows(const Renderer* rend,const Camera& cam) 
+static void render_shadows(Renderer* rend,const Camera& cam) 
 {
 	const float cascadeSplitLambda = 0.550f;
 	float nearS = 0.1f;
-	float farS  = 75.f;
+	float farS  = 100.f;
 	float clipRange = farS - nearS;
 	float minz = nearS;
 	float maxz  = nearS + clipRange;
@@ -504,8 +578,8 @@ static void render_shadows(const Renderer* rend,const Camera& cam)
 	float ratio = maxz / minz;
 
 	float cascadeSplits[NUM_CASCADES];
-	mat4 lightViews[NUM_CASCADES];
-	mat4 shadowOrthos[NUM_CASCADES];
+	mat4  lightViews[NUM_CASCADES];
+	mat4  shadowOrthos[NUM_CASCADES];
 	float splitDepths[NUM_CASCADES];
 	// calculate splits
 	for(u32 i = 0; i < NUM_CASCADES;i++) {
@@ -565,11 +639,28 @@ static void render_shadows(const Renderer* rend,const Camera& cam)
 		vec3 maxExtents = vec3(radius);
 		vec3 minExtents = get_scaled(maxExtents,-1);
 
-		vec3 lDir = normalized(glight_direction);
+		vec3 lDir = normalized(get_scaled(glight_direction,1.f));
+
+		glm::mat4 temp = glm::lookAt(
+				(*(glm::vec3*)&frustumCenter) - 
+				(*(glm::vec3*)&lDir) *
+				-minExtents.z,
+				*(glm::vec3*)&frustumCenter,
+				glm::vec3(0,1.f,0));
+
+		mat4 lightViewMatrix = *(mat4*)&temp;
+
+#if 0
+		glm::mat4 lightOrthoMatrix_glm = glm::ortho(
+				minExtents_glm.x,maxExtents_glm.x,
+				minExtents_glm.y,maxExtents_glm.y,
+				0.f, maxExtents_glm.z - minExtents_glm.z);
+
 		//*(glm::vec3*)&rend->light.dir);
 
 		mat4 lightViewMatrix;
 		create_lookat_mat4(&lightViewMatrix,frustumCenter - lDir * -minExtents.z,frustumCenter,{0,1.f,0});
+#endif
 		//glm::lookAt(frustumCenter - lDir * -minExtents.z,
 		//frustumCenter,
 		//glm::vec3(0,1.f,0));
@@ -578,17 +669,20 @@ static void render_shadows(const Renderer* rend,const Camera& cam)
 				minExtents.x,maxExtents.x,
 				minExtents.y,maxExtents.y,
 				0.f, maxExtents.z - minExtents.z);
-
 		splitDepths[i] = (nearS + splitDist * clipRange) * -1.0f;
 		lightViews[i] = lightViewMatrix;
 		shadowOrthos[i] = lightOrthoMatrix;
 		lastSplitDist = cascadeSplits[i];//splitDepths[i];
 	}
-	glDepthMask(GL_TRUE);
+	for(int i = 0; i < NUM_CASCADES;i++) {
+		rend->shadowrenderer.matrixes[i] = shadowOrthos[i] * lightViews[i];
+		rend->shadowrenderer.splitdistances[i] = splitDepths[i];
+	}
 	// now render!
-	GLERRCHECK(glUseProgram(rend->shadowrenderer.shader));
 	for(u32 i = 0; i < NUM_CASCADES;i++) {
 		set_and_clear_frameTexture(rend->shadowrenderer.cascades[i]);
+
+		GLERRCHECK(glUseProgram(rend->shadowrenderer.shader));
 		// bind view and projection matrixes
 		GLERRCHECK(glUniformMatrix4fv(VIEWLOC, 1, GL_FALSE, (GLfloat*)&lightViews[i]));
 		GLERRCHECK(glUniformMatrix4fv(PROJECTIONLOC, 1, GL_FALSE, (GLfloat*)&shadowOrthos[i]));
@@ -615,10 +709,20 @@ static void render_shadows(const Renderer* rend,const Camera& cam)
 static void render(Renderer* rend,const Camera& cam) 
 {
 	// render shadows
-	//render_shadows(rend,cam);
+#if 1
+	set_and_clear_frameTexture(rend->shadowrenderer.cascades[0]);
+	GLERRCHECK(glBindFramebuffer(GL_FRAMEBUFFER,0));
+#else
+
+	glEnable(GL_CULL_FACE); 
+	glCullFace(GL_BACK);
+	render_shadows(rend,cam);
+	glCullFace(GL_BACK);
+#endif
 	// set up
 
 #if 1
+	glViewport(0, 0, SCREENWIDHT, SCREENHEIGHT);
 	GLERRCHECK(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 	glDepthMask(GL_TRUE);
 	//TODO(pate) check cull face order
@@ -627,6 +731,18 @@ static void render(Renderer* rend,const Camera& cam)
 	GLERRCHECK(glUseProgram(rend->modelShader));
 	GLERRCHECK(glUniformMatrix4fv(PROJECTIONLOC, 1, GL_FALSE, (GLfloat*)&cam.projection));
 	GLERRCHECK(glUniformMatrix4fv(VIEWLOC, 1, GL_FALSE, (GLfloat*)&cam.view));
+	// bind shadow data!
+
+	GLERRCHECK(glUniformMatrix4fv(SHADOWMATRIXLOC, 
+				NUM_CASCADES, GL_FALSE, (GLfloat*)&rend->shadowrenderer.matrixes));
+	GLERRCHECK(glUniform4fv(SHADOWSPLITLOC, 1, (float*)&rend->shadowrenderer.splitdistances));
+	// activate shadow textures and use them!
+
+	for(int i = 0; i < NUM_CASCADES; i++) {
+		GLERRCHECK(glActiveTexture(GL_TEXTURE0 + SHADOWSAMPLERLOC + i));
+		GLERRCHECK(glBindTexture(GL_TEXTURE_2D,
+					rend->shadowrenderer.cascades[i].texture));
+	}
 	for(RenderData data : rend->renderables) 
 	{
 		mat4 model;
@@ -671,7 +787,4 @@ static void render(Renderer* rend,const Camera& cam)
 #endif
 	rend->renderables.clear();
 }
-
 #endif //MP_RENDERER
-
-
