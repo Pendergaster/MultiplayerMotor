@@ -1,14 +1,14 @@
 #ifndef MP_RENDERER
 #define MP_RENDERER
 #define STB_IMAGE_IMPLEMENTATION
-#include <glm_deprecated/glm.hpp>
-#include <glm_deprecated/gtc/matrix_transform.hpp>
+//#include <glm_deprecated/glm.hpp>
+//#include <glm_deprecated/gtc/matrix_transform.hpp>
 #include <stb_image.h>
 #undef STB_IMAGE_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 #undef TINYOBJLOADER_IMPLEMENTATION
-#include <glad/include/glad/glad.h>
+//#include <glad/include/glad/glad.h>
 //#include <glm/glm.hpp>
 //#include <glm/gtc/quaternion.hpp> 
 #include "math.h"
@@ -565,7 +565,7 @@ static inline void render_cube(Renderer* rend,const vec3& pos,const vec3& scale,
 {
 	rend->renderables.emplace_back(Model::Cube,pos,scale,orientation,color);
 }
-
+#if 0
 static void render_shadows(Renderer* rend,const Camera& cam) 
 {
 	const float cascadeSplitLambda = 0.550f;
@@ -705,19 +705,21 @@ static void render_shadows(Renderer* rend,const Camera& cam)
 	// restore normal framebuffer
 	GLERRCHECK(glBindFramebuffer(GL_FRAMEBUFFER,0));
 }
+#endif
 
 static void render(Renderer* rend,const Camera& cam) 
 {
 	// render shadows
 #if 1
-	set_and_clear_frameTexture(rend->shadowrenderer.cascades[0]);
-	GLERRCHECK(glBindFramebuffer(GL_FRAMEBUFFER,0));
-#else
-
 	glEnable(GL_CULL_FACE); 
 	glCullFace(GL_BACK);
-	render_shadows(rend,cam);
+	set_and_clear_frameTexture(rend->shadowrenderer.cascades[0]);
+	GLERRCHECK(glBindFramebuffer(GL_FRAMEBUFFER,0));
 	glCullFace(GL_BACK);
+#else
+
+	
+	render_shadows(rend,cam);
 #endif
 	// set up
 

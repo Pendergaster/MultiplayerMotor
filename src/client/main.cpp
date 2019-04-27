@@ -63,7 +63,6 @@ int main(int argc,char* argv[])
 	init_inputs(&inputs);
 	glfwSetWindowUserPointer(window,&inputs);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); 
-	Renderer renderer = init_renderer();
 	Camera camera = get_camera(
 			{0.f,0.f,-3.f},
 			0,-90,
@@ -73,6 +72,10 @@ int main(int argc,char* argv[])
 	float deltaAngle = 1.f * deg_to_rad;
 	quaternion rotaxis({90.f,0.f,90.f},deltaAngle);
 	quaternion rotation;
+	Game game;
+	init_game(&game);
+
+	game.renderer = init_renderer();
 	while (!glfwWindowShouldClose(window)) {
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
 		{
@@ -113,31 +116,32 @@ int main(int argc,char* argv[])
 			vec3 pos = vec3(connection->cubePos[i].getX(),connection->cubePos[i].getY(),connection->cubePos[i].getZ());
 			vec3 rots = vec3(connection->cubeRot[i].getX(),connection->cubeRot[i].getY(),connection->cubeRot[i].getZ());
 			quaternion rot = quaternion(rots, connection->cubeRot[i].getW());
-			render_cube(&renderer, pos, 1, rot, {255,0,0,255});
+			render_cube(&game.renderer, pos, 1, rot, {255,0,0,255});
 		}
 		for (int i = 0; i < connection->playerPos.size(); i++)
 		{
 			vec3 pos = vec3(connection->playerPos[i].getX(),connection->playerPos[i].getY(),connection->playerPos[i].getZ());
 			vec3 rots = vec3(connection->playerRot[i].getX(),connection->playerRot[i].getY(),connection->playerRot[i].getZ());
 			quaternion rot = quaternion(rots, connection->playerRot[i].getW());
-			render_cube(&renderer, pos, 2, rot, {255,255,0,255});
+			render_cube(&game.renderer, pos, 2, rot, {255,255,0,255});
 		}
 
 #endif
+		update_components(&game);
 		/*End of the test*/
-		render_cube(&renderer,
+		render_cube(&game.renderer,
 				{0,0,0},
 				{1.f,1.f,1.f},
 				rotation,
 				//{0,0,0,1.f},
 				{255,255,255,255});
-		render_cube(&renderer,
+		render_cube(&game.renderer,
 				{0,-3.f,0},
 				{10.f,1.f,10.f},
 				{1,0,0,0},
 				//{0,0,0,1.f},
 				{0,0,255,255});
-		render(&renderer,camera);
+		render(&game.renderer,camera);
 		glfwSwapBuffers(window);
 	}
 	glfwTerminate();
