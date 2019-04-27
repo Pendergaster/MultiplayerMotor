@@ -707,6 +707,10 @@ static void render_shadows(Renderer* rend,const Camera& cam)
 }
 #endif
 
+static inline void render_start(Renderer* rend)
+{
+	rend->renderables.clear();
+}
 static void render(Renderer* rend,const Camera& cam) 
 {
 	// render shadows
@@ -787,6 +791,5 @@ static void render(Renderer* rend,const Camera& cam)
 	glDepthFunc(GL_LESS);
 #endif 
 #endif
-	rend->renderables.clear();
 }
 #endif //MP_RENDERER

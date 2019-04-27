@@ -73,8 +73,6 @@ static void update_camera(Camera* cam) {
 					up)) * cameraSpeed;
 	}
 
-
-
 	create_lookat_mat4(&cam->view,cam->position,
 			cam->position + cam->direction,up);
 }

@@ -1,5 +1,5 @@
 @echo off
-
+cls
 SETLOCAL
 REM ox- nopee optimointi, 0t nopeutta , oB2 inlineany, Oi instribdsdsds
 REM Od ei optimisaatioita

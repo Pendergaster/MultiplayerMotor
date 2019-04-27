@@ -4,31 +4,18 @@
 #include <stdlib.h>
 #include <glad/include/glad/glad.h>
 #include <glad/src/glad.c>
-//#include <GLFW/glfw3.h>
-//#include <glm/glm.hpp>
+#include <GLFW/glfw3.h>
 #include "math.h"
-#if 0
-#include <bullet/btBulletDynamicsCommon.h>
-#include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#endif
-
-
+#define MIKA 1
+#if MIKA
 #include "Client.h"
 #include "cppincludes.h"
-
-#define STB_IMAGE_IMPLEMENTATION
-
-//TODO(pate) add stbimage.h
-#undef STB_IMAGE_IMPLEMENTATION
-
-#define SCREENWIDHT 800
-#define SCREENHEIGHT 800
+#endif
 #include "inputs.h"
 #include "renderer.h"
 #include "camera.h"
-
-static void glfw_error_callback(int e, const char *d)
-{
+#include "game.h"
+static void glfw_error_callback(int e, const char *d) {
 	printf("Error %d: %s\n", e, d);
 }
 
@@ -55,7 +42,7 @@ GLFWwindow* init_window()
 int main(int argc,char* argv[])
 {
 	(void)argc;(void)argv;
-#if 0
+#if MIKA
 	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
 	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
 	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
@@ -64,37 +51,40 @@ int main(int argc,char* argv[])
 			overlappingPairCache, solver, collisionConfiguration);
 
 	dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
-#endif
 	Client* connection = new Client("127.0.0.1", 60000, "Loyalisti"); //Create new connection to server;
 	connection->OpenConnection(); //Let attempt to open it;
 	int a, w, d, s = 0;
 	//TODO(mika) vaihda noista inteistä keyn yhteen inttiin
 	connection->SetVar(PLAYER_INPUT, std::vector<int*>{&w, &a, &s, &d});
 
+#endif
 	GLFWwindow* window = init_window();
 	Input inputs;
 	init_inputs(&inputs);
 	glfwSetWindowUserPointer(window,&inputs);
-	Renderer renderer = init_renderer();
-	Camera camera;
-	identify(&camera.view);
-	translate(&camera.view, vec3(0.0f, 0.0f, -3.0f)); 
-	perspective(&camera.projection,deg_to_rad*45.0f, 
-			(float)SCREENWIDHT / (float)SCREENHEIGHT, 0.1f, 100.0f);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); 
+	Camera camera = get_camera(
+			{0.f,0.f,-3.f},
+			0,-90,
+			90.f,	
+			(float)SCREENWIDHT / (float)SCREENHEIGHT
+			);
 	float deltaAngle = 1.f * deg_to_rad;
 	quaternion rotaxis({90.f,0.f,90.f},deltaAngle);
 	quaternion rotation;
-<<<<<<< HEAD:src/main.cpp
-	while (!glfwWindowShouldClose(window)) {
-=======
-	float l3 = lenght(rotation);
-	printf("AXIS L %f\n",l3);
+	Game game;
+	init_game(&game);
 
-	while (!glfwWindowShouldClose(window))
-	{
->>>>>>> 03bae536f3430ba0be860082e23bdc66df6d9974:src/client/main.cpp
-		connection->Update();
+	game.renderer = init_renderer();
+	while (!glfwWindowShouldClose(window)) {
+		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+		{
+			break;
+		}
+
 		glfwPollEvents();
+#if MIKA
+		connection->Update();
 
 		if(key_down(Key::KEY_A)) {  a = 1; }
 		else { a = 0; }
@@ -105,6 +95,14 @@ int main(int argc,char* argv[])
 		if (key_down(Key::KEY_S)) { s = 1; }
 		else { s = 0; }
 
+		update_camera(&camera);
+
+		if (connection->playerPos.size() > connection->playerSlot)
+		{
+			camera.position = vec3(connection->playerPos[connection->playerSlot].getX(), connection->playerPos[connection->playerSlot].getY()+6,connection->playerPos[connection->playerSlot].getZ());
+		}
+#endif
+
 		if(key_pressed(Key::KEY_E)) { LOG("e pressed\n"); }
 		else if (key_down(Key::KEY_E)) { LOG("e down"); }
 
@@ -114,18 +112,56 @@ int main(int argc,char* argv[])
 		glViewport(0, 0, display_w, display_h);
 		//glClear(GL_COLOR_BUFFER_BIT);
 		rotation *= rotaxis;
-		render_cube(&renderer,
+
+		/*Test of network handled cubes*/
+
+#if MIKA
+		for (int i = 0; i < connection->cubePos.size(); i++)
+		{
+			vec3 pos = vec3(connection->cubePos[i].getX(),connection->cubePos[i].getY(),connection->cubePos[i].getZ());
+			vec3 rots = vec3(connection->cubeRot[i].getX(),connection->cubeRot[i].getY(),connection->cubeRot[i].getZ());
+			quaternion rot = quaternion(rots, connection->cubeRot[i].getW());
+			render_cube(&game.renderer, pos, 1, rot, {255,0,0,255});
+		}
+		for (int i = 0; i < connection->playerPos.size(); i++)
+		{
+			vec3 pos = vec3(connection->playerPos[i].getX(),connection->playerPos[i].getY(),connection->playerPos[i].getZ());
+			vec3 rots = vec3(connection->playerRot[i].getX(),connection->playerRot[i].getY(),connection->playerRot[i].getZ());
+			quaternion rot = quaternion(rots, connection->playerRot[i].getW());
+<<<<<<< HEAD
+			render_cube(&game.renderer, pos, 2, rot, {255,255,0,255});
+=======
+			if (i == connection->playerSlot)
+			{
+				printf("%f , %f, %f \n", pos.x, pos.y, pos.z);
+			}
+			render_cube(&renderer, pos, 2, rot, {255,255,0,255});
+>>>>>>> b47c446a8a312a619ab3590594ecdab223a349cb
+		}
+
+#endif
+		update_components(&game);
+		/*End of the test*/
+		render_cube(&game.renderer,
 				{0,0,0},
 				{1.f,1.f,1.f},
 				rotation,
 				//{0,0,0,1.f},
 				{255,255,255,255});
-		render(&renderer,camera);
+		render_cube(&game.renderer,
+				{0,-3.f,0},
+				{10.f,1.f,10.f},
+				{1,0,0,0},
+				//{0,0,0,1.f},
+				{0,0,255,255});
+		render(&game.renderer,camera);
 		glfwSwapBuffers(window);
 	}
 	glfwTerminate();
+#if MIKA
 	connection->CloseConnection(); //Close connection to server;
 	delete connection; //Hakai the connecsjioon;
+#endif
 	printf("bye!\n");
 	return 0;
 }

@@ -6,6 +6,7 @@
 #include "renderer.h"
 #include "utils.h"
 #include "math.h"
+#include "inputs.h"
 
 struct ThightArray {
 	u8*		start;
@@ -199,10 +200,9 @@ struct Game {
 	Pool					entities;
 	Renderer				renderer;	
 	ThightArray				updateArrays[MaxComponent];
-	//ThightArray				freeComponents[MaxComponent];
 	Pool					componentPools[MaxComponent];
-	//COMPONENT_TYPES(GENERATE_VECTOR); // vectors of components for updating
-	//COMPONENT_TYPES(GENERATE_COMPONENTPOOL); //component pools
+	Input					inputs;
+	// mikan connectio luokka
 };
 
 struct PhysicsWorldData {
@@ -281,7 +281,7 @@ UPDATEFUNC(Render) {
 }
 
 void update_components(Game* game) {
-
+#if 0
 	do { ;
 		CONCAT(Physics,Component)** temp = (CONCAT(Physics,Component)**)(game->updateArrays[Physics].start); 
 		for(u32 i = 0; i < game->updateArrays[Physics].lastindex; i++) 
@@ -308,13 +308,14 @@ void update_components(Game* game) {
 		};
 	} while(0);
 
-
-
-	//COMPONENT_TYPES(UPDATE_COMPONENT)
+#else
+	COMPONENT_TYPES(UPDATE_COMPONENT)
+#endif
 }
 
 
 Entity* get_player_component(Game* game);
+Entity* get_floor_component(Game* game,vec3 pos,vec3 scale);
 void init_game(Game* game) 
 {
 	memset(game,0,sizeof *game);
@@ -344,6 +345,33 @@ void init_game(Game* game)
 
 	// INIT GAMES START COMPONENTS
 	Entity* player = get_player_component(game);
+	Entity* floor = get_floor_component(game,{0,0,0},{5,1,5});
+	(void)player;
+	(void)floor;
+
+	//Server
+	int id = 0;
+	id++;
+
+
+	[1 + type {pos,orientation}]
+	[7 + type {pos,orientation}]
+	[3 + type {pos,orientation}]
+	[4 + type {pos,orientation}]
+	[5 + type {pos,orientation}]
+	[6 + type {pos,orientation}]
+	//spawn object -> 
+	//Client
+	
+	[1 + type ][7 + type ][3 + type ][4 + type ][5 + type ][6 + type ]
+
+	 {
+		vec of objects : 
+		id			   : 
+	 }
+
+
+	Client lähettää takas pelkän input staten
 }
 
 Entity* get_player_component(Game* game) 
@@ -353,7 +381,18 @@ Entity* get_player_component(Game* game)
 	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
 	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
 	RenderInit(rend,ent);
-	TransformInit(tran,ent,{0,0,0},{1,1,1},{0,0,0,1});
+	TransformInit(tran,ent,{0,2,0},{1,1,1},{0,0,0,1});
+	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
+	return ent;
+}
+Entity* get_floor_component(Game* game,vec3 pos,vec3 scale) 
+{
+	RenderComponent* rend = (RenderComponent*)get_component(game,Render);
+	TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
+	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
+	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+	RenderInit(rend,ent);
+	TransformInit(tran,ent,pos,scale,{0,0,0,1});
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
 }
