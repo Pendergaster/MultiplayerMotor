@@ -34,7 +34,7 @@ void Client::OpenConnection()
 	Peer->Connect(IP.c_str(),SERVER_PORT, 0, 0);
 
 	Delta = chrono::system_clock::now();
-	TimeInterval = (int)((1.0 / 120) * 1000);
+	TimeInterval = (int)((1.0 / 60) * 1000);
 }
 
 void Client::Update()
@@ -44,6 +44,7 @@ void Client::Update()
 	if ((float)TimeDifference.count() > TimeInterval)
 	{
 		Delta += chrono::milliseconds((int)TimeInterval);
+		SendPlayerState();
 		for (Packet = Peer->Receive(); Packet != 0; Packet = Peer->Receive())
 		{
 			/*Switch case that lets us check what kind of packet it was*/
@@ -96,7 +97,6 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 		ProcessBallUpdate(Packet);
 		break;
 	case PLAYER_INPUT:
-		CheckForVar(PLAYER_INPUT);
 		break;
 	case CUBE_INFO:
 		//ReadCubeInfo(Packet);
@@ -105,6 +105,16 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 		ReadBulk(Packet);
 		break;
 	}
+}
+
+void Client::SendPlayerState()
+{
+	RakNet::BitStream bs;
+	bs.Write((RakNet::MessageID)PLAYER_STATE);
+	//printf("%i", input);
+	bs.Write(lookDir);
+	bs.Write(input);
+	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
 }
 
 void Client::RetryConnection()

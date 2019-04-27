@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MessageCodes.h"
+#include "inputs.h"
 /*Including basic raknet headeres*/
 #include <raknet/RakPeerInterface.h>
 #include <raknet/MessageIdentifiers.h>
@@ -48,6 +49,7 @@ public:
 	void ReadBulk(RakNet::Packet* packet);
 	void ReadCubeInfo(RakNet::BitStream* bs);
 	void ReadPlayerInfo(RakNet::BitStream* bs);
+	void SendPlayerState();
 
 /*PRIVATE FUNCTIONS*/
 private:
@@ -74,6 +76,9 @@ public:
 	std::vector<btVector3> playerPos;
 	std::vector<btQuaternion> playerRot;
 	int playerSlot;
+
+	vec3 lookDir;
+	inputType input;
 /*PRIVATE VARIABLES*/
 private:
 

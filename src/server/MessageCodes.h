@@ -22,6 +22,8 @@ enum CustomMessages
 	PLAYER_INFO,
 	FLOOR,
 	PLAYER_SLOT,
+	PLAYER_LOOK_DIR,
+	PLAYER_STATE
 };
 
 enum Type

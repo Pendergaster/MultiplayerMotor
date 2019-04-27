@@ -131,10 +131,12 @@
   <ItemGroup>
     <ClInclude Include="..\..\src\server\ClientInformation.h" />
     <ClInclude Include="..\..\src\server\GameState.h" />
+    <ClInclude Include="..\..\src\server\inputs.h" />
     <ClInclude Include="..\..\src\server\MessageCodes.h" />
     <ClInclude Include="..\..\src\server\Server.h" />
     <ClInclude Include="..\..\src\server\UserDatabase.h" />
     <ClInclude Include="..\..\src\server\UserVariables.h" />
+    <ClInclude Include="..\..\src\server\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

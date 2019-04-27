@@ -11,6 +11,7 @@
 #include "MessageCodes.h"
 #include "UserDatabase.h"
 #include "UserVariables.h"
+#include "inputs.h"
 
 #include "UserDatabase.cpp"
 
@@ -32,7 +33,6 @@ class Server
 	/*Public Functions*/
 public:
 	Server(string IP, int Port);
-	~Server();
 	void ServerStart();
 	void InitBulletWorld();
 	void ServerStop();
@@ -45,11 +45,12 @@ public:
 	void SendSlotID(RakNet::SystemAddress addr, int id);
 	void BroadcastVar(CustomMessages Var, RakNet::Packet Packet);
 	void SendCubeInfo();
-	void ReadBulk(RakNet::Packet* packet);
+	void ReadPlayerState(RakNet::Packet* packet);
 	void WriteBulk();
 	void AddPlayerCube(std::string name);
 	void RemovePlayerCube(std::string name);
-
+	void ReadPlayerLookDir(RakNet::Packet* packet);
+	void UpdatePlayerCube(std::string guid,inputType input, vec3 lookDir);
 	void ReadPlayerInput(RakNet::Packet* packet);
 	void ReadPlayerCoord(RakNet::Packet* packet);
 	/*Private variables*/
@@ -84,5 +85,6 @@ private:
 	btBroadphaseInterface * overlappingPairCache;
 	btSequentialImpulseConstraintSolver * solver;
 	btDiscreteDynamicsWorld * dynamicsWorld;
-
+	
+	float MovementSpeedMultiplier = 3;
 };

@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include "utils.h"
+
 typedef u32 inputType;
 enum class Key : inputType
 {

@@ -17,11 +17,6 @@ Server::Server(string IP, int Port)
 	InitBulletWorld();
 }
 
-
-Server::~Server()
-{
-}
-
 void Server::InitBulletWorld()
 {
 	collisionConfiguration =	new btDefaultCollisionConfiguration();
@@ -128,8 +123,7 @@ void Server::ServerUpdate()
 	if ((float)Delta.count() > TimeInterval)
 	{
 		Delta120 += chrono::milliseconds((int)TimeInterval);
-		dynamicsWorld->stepSimulation(1.0f / 120, 10);
-		RequestFromAll(PLAYER_INPUT);
+		dynamicsWorld->stepSimulation(1.0 / 120.0);
 
 		//SendCubeInfo();
 		WriteBulk();
@@ -152,15 +146,15 @@ void Server::CheckPacket(const RakNet::Packet& P)
 		break;
 	case USERNAME_FOR_GUID:
 		Result = Connections->RegisterGuid(Packet);
-		if (Result == "RECONNECT") { SendResponse(Packet->systemAddress, LOGIN_ACCEPTED); CONSOLE("ID: " << Packet->guid.ToString() << " reconnected"); break; }
-		if (Result == "NONE") { SendResponse(Packet->systemAddress, LOGIN_FAILED); CONSOLE("ID: " << Packet->guid.ToString() << " failed to give username"); break; }
-		else 
-		{
-			SendResponse(Packet->systemAddress, LOGIN_ACCEPTED);
-			AddPlayerCube(Packet->guid.ToString());
-			SendSlotID(Packet->systemAddress, players.size()-1);
-			CONSOLE(Packet->guid.ToString() << " gave an username " << Result);
-		}
+		//if (Result == "RECONNECT") { SendResponse(Packet->systemAddress, LOGIN_ACCEPTED); CONSOLE("ID: " << Packet->guid.ToString() << " reconnected"); break; }
+		//if (Result == "NONE") { SendResponse(Packet->systemAddress, LOGIN_FAILED); CONSOLE("ID: " << Packet->guid.ToString() << " failed to give username"); break; }
+		//else 
+		//{
+		SendResponse(Packet->systemAddress, LOGIN_ACCEPTED);
+		AddPlayerCube(Packet->guid.ToString());
+		SendSlotID(Packet->systemAddress, players.size()-1);
+		CONSOLE(Packet->guid.ToString() << " gave an username " << Result);
+		//}
 		break;
 	case ID_CONNECTION_LOST:
 		Connections->RemoveUser(Packet);
@@ -173,8 +167,11 @@ void Server::CheckPacket(const RakNet::Packet& P)
 	case PLAYER_INPUT:
 		ReadPlayerInput(Packet);
 		break;
-	case READ_BULK:
-		ReadBulk(Packet);
+	case PLAYER_STATE:
+		ReadPlayerState(Packet);
+		break;
+	case PLAYER_LOOK_DIR:
+		ReadPlayerLookDir(Packet);
 		break;
 	}
 }
@@ -290,15 +287,65 @@ void Server::SendCubeInfo()
 		if (i == 2)
 		{
 			trans.getOrigin();
-			printf("y force: %f\n", trans.getOrigin().getY());
 		}
 	}
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
 }
 
-void Server::ReadBulk(RakNet::Packet* packet)
+void Server::ReadPlayerState(RakNet::Packet* packet)
 {
-	
+	RakNet::BitStream bs(packet->data, packet->length, false);
+	bs.IgnoreBytes(sizeof(RakNet::MessageID));
+
+	vec3 lookDir;
+	inputType input;
+	bs.Read(lookDir);
+	bs.Read(input);
+	//printf("%i\n", input);
+	UpdatePlayerCube(packet->guid.ToString(),input,lookDir);
+	//extract input
+	//extract lookdir
+	//Handle input
+
+}
+
+void Server::UpdatePlayerCube(std::string guid, inputType input, vec3 lookDir)
+{
+	//W = 22, A = 0, S = 18, D = 3
+	//Check Input
+	for (int i = 0; i < players.size(); i++)
+	{
+		if (slots[i] == guid)
+		{
+			players[i]->activate(true);
+			vec3 cross = cross_product(lookDir, { 0,1,0 });
+			cross = normalized(cross);
+
+			lookDir = lookDir * MovementSpeedMultiplier;
+			cross = cross * MovementSpeedMultiplier;
+
+			if ((input & (1 << 22)) != 0)
+			{
+				//printf("w\n");
+				players[i]->applyCentralForce({lookDir.x,0,lookDir.z});
+			}
+			if ((input & (1 << 18)) != 0)
+			{
+				//printf("s\n");
+				players[i]->applyCentralForce({-lookDir.x,0,-lookDir.z});
+			}
+			if ((input & (1 << 0)) != 0)
+			{
+				//printf("a\n");
+				players[i]->applyCentralForce({-cross.x,0,-cross.z});
+			}
+			if ((input & (1 << 3)) != 0)
+			{
+				//printf("d\n");
+				players[i]->applyCentralForce({cross.x,0,cross.z});
+			}
+		}
+	}
 }
 
 void Server::WriteBulk()
@@ -335,5 +382,19 @@ void Server::WriteBulk()
 		}
 	}
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
+}
+
+void Server::ReadPlayerLookDir(RakNet::Packet* packet)
+{
+	RakNet::BitStream bs(packet->data, packet->length, false);
+	bs.IgnoreBytes(sizeof(RakNet::MessageID));
+
+	for (int i = 0; i < slots.size(); i++)
+	{
+		if(slots[i] == packet->guid.ToString())
+		{
+
+		}
+	}
 }
 

@@ -70,6 +70,7 @@ int main(int argc,char* argv[])
 			90.f,	
 			(float)SCREENWIDHT / (float)SCREENHEIGHT
 			);
+	connection->SetVar(PLAYER_LOOK_DIR, std::vector<float*>{&camera.direction.x, &camera.direction.y, &camera.direction.z});
 	float deltaAngle = 1.f * deg_to_rad;
 	quaternion rotaxis({90.f,0.f,90.f},deltaAngle);
 	quaternion rotation;
@@ -81,6 +82,8 @@ int main(int argc,char* argv[])
 
 		glfwPollEvents();
 #if MIKA
+		connection->input = inputs.keys;
+		connection->lookDir = camera.direction;
 		connection->Update();
 
 		if(key_down(Key::KEY_A)) {  a = 1; }
@@ -103,8 +106,8 @@ int main(int argc,char* argv[])
 		if(key_pressed(Key::KEY_E)) { LOG("e pressed\n"); }
 		else if (key_down(Key::KEY_E)) { LOG("e down"); }
 
-		update_keys(&inputs);
 		int display_w,display_h;
+		update_keys(&inputs);
 		glfwGetFramebufferSize(window, &display_w, &display_h);
 		glViewport(0, 0, display_w, display_h);
 		//glClear(GL_COLOR_BUFFER_BIT);
@@ -127,7 +130,7 @@ int main(int argc,char* argv[])
 			quaternion rot = quaternion(rots, connection->playerRot[i].getW());
 			if (i == connection->playerSlot)
 			{
-				printf("%f , %f, %f \n", pos.x, pos.y, pos.z);
+				//printf("%f , %f, %f \n", pos.x, pos.y, pos.z);
 			}
 			render_cube(&renderer, pos, 2, rot, {255,255,0,255});
 		}
