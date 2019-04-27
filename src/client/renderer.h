@@ -197,7 +197,7 @@ static ModelData load_cube() {
 	GLERRCHECK(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float))));
 	GLERRCHECK(glEnableVertexAttribArray(1));
 	GLERRCHECK(glBindVertexArray(0));
-	cube.numVerts = d.size();//sizeof vertices / (sizeof(float) * 6);
+	cube.numVerts = (u32)d.size();//sizeof vertices / (sizeof(float) * 6);
 
 #endif
 	return cube;

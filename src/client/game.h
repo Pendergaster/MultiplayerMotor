@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include "objecttype.h"
 #include "renderer.h"
 #include "utils.h"
 #include "math.h"
 #include "inputs.h"
-#include "objecttype.h"
 struct ThightArray {
 	u8*		start;
 	u32		stride;
@@ -151,7 +151,7 @@ struct ComponentHeader {
 	FUNC(Transform,MAXENTITIES,false)\
 	FUNC(Physics,MAXENTITIES,true)\
 	FUNC(Render,MAXENTITIES,true)\
-	FUNC(NetWorkSync,1,false)
+	FUNC(NetWorkSync,1,true)
 
 
 DECLARECOMPONENT(Transform,
@@ -162,8 +162,16 @@ DECLARECOMPONENT(Transform,
 
 // updates transform + physics
 DECLARECOMPONENT(Physics);
+
+struct ClientObjectTracker {
+	ObjectTracker			track;
+	Entity*					ent;
+	TransformComponent*		trans;
+	PhysicsComponent*		physics;
+};
+
 DECLARECOMPONENT(NetWorkSync,
-		//std::vector<>
+		std::vector<ClientObjectTracker> objs;
 		);
 
 // pushes box to renderer, color
@@ -268,6 +276,10 @@ UPDATEFUNC(Physics) {
 	(void)comp;(void)game;
 }
 
+COMPONENTINIT(Physics,vec3 pos,vec3 scale,quaternion orientation,vec3 angularVelocity) {
+
+}
+
 COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	(void)ent;
 	comp->pos = pos;
@@ -277,12 +289,67 @@ COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 
 COMPONENTINIT(Render) {
 	comp->transform = (TransformComponent*)get_component_from_entity(ent,Transform);
-	assert(comp->transform);
+	ASSERT_MESSAGE(comp->transform,"failed to find transform!!");
 }
 UPDATEFUNC(Render) {
 	render_cube(&game->renderer,comp->transform->pos,
 				comp->transform->scale,comp->transform->orientation,comp->color);
 }
+Entity* get_player_object(Game* game);
+Entity* get_floor_object(Game* game,vec3 pos,vec3 scale);
+Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale);
+
+ClientObjectTracker spawn_network_object(Game* game,const ObjectTracker& track) {
+	ClientObjectTracker ret;
+	ret.track = track;
+	switch(track.type) {
+		case ObjectType::Floor: {
+			Entity* temp = get_floor_object(game,track.pos,floor_scale);
+			ret.ent = temp;
+			ret.physics = NULL;
+			ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
+			ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
+		} break;
+		case ObjectType::FreeSimulation: {
+			Entity* temp = get_freesimulation_object(game,track.pos,floor_scale);
+			ret.ent = temp;
+			ret.physics = (PhysicsComponent*)get_component_from_entity(temp,Physics);
+			ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
+			ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
+			ASSERT_MESSAGE(ret.physics,"FAILED TO FIND PHYSICS");
+		} break;
+		case ObjectType::Player: {
+		
+		} break;
+		default : ABORT_MESSAGE("unknown object spawning!");
+	}
+	return ret;
+}
+
+UPDATEFUNC(NetWorkSync) {
+	std::vector<ObjectTracker> serverobjs;
+	for(size_t i = 0; i < serverobjs.size();i++) {
+		if(i >= comp->objs.size()) {
+		// spawn if more objecs have came		
+			ClientObjectTracker temp = spawn_network_object(game,serverobjs[i]);
+			comp->objs.push_back(temp);
+		} else if(serverobjs[i].type != comp->objs[i].track.type) {
+		// (de)spawn if type is different
+			if(serverobjs[i].type != ObjectType::Inactive) {
+				ClientObjectTracker temp = spawn_network_object(game,serverobjs[i]);
+				comp->objs[i] = temp;
+			} else {
+				dispose_entity(game,comp->objs[i].ent);
+				comp->objs[i].track.type =  ObjectType::Inactive;
+			}
+		} else if(comp->objs[i].track.type != ObjectType::Inactive){
+		//sych objects
+			comp->objs[i].trans->pos = serverobjs[i].pos;
+			comp->objs[i].trans->orientation = serverobjs[i].orientation;
+		}
+	}
+}
+	
 
 void update_components(Game* game) {
 #if 0
@@ -318,8 +385,6 @@ void update_components(Game* game) {
 }
 
 
-Entity* get_player_component(Game* game);
-Entity* get_floor_component(Game* game,vec3 pos,vec3 scale);
 void init_game(Game* game) 
 {
 	memset(game,0,sizeof *game);
@@ -348,8 +413,8 @@ void init_game(Game* game)
 	}
 
 	// INIT GAMES START COMPONENTS
-	Entity* player = get_player_component(game);
-	Entity* floor = get_floor_component(game,{0,0,0},{5,1,5});
+	Entity* player = get_player_object(game);
+	Entity* floor = get_floor_object(game,{0,0,0},{5,1,5});
 	(void)player;
 	(void)floor;
 #if 0
@@ -394,7 +459,7 @@ void init_game(Game* game)
 #endif
 }
 
-Entity* get_player_component(Game* game) 
+Entity* get_player_object(Game* game) 
 {
 	RenderComponent* rend = (RenderComponent*)get_component(game,Render);
 	TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
@@ -405,7 +470,7 @@ Entity* get_player_component(Game* game)
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
 }
-Entity* get_floor_component(Game* game,vec3 pos,vec3 scale) 
+Entity* get_floor_object(Game* game,vec3 pos,vec3 scale) 
 {
 	RenderComponent* rend = (RenderComponent*)get_component(game,Render);
 	TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
@@ -417,4 +482,16 @@ Entity* get_floor_component(Game* game,vec3 pos,vec3 scale)
 	return ent;
 }
 
+Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale)
+{
+	RenderComponent* rend = (RenderComponent*)get_component(game,Render);
+	TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
+	PhysicsComponent* phy = (PhysicsComponent*)get_component(game,Physics);
+	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran,(ComponentHeader*)phy};
+	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+	RenderInit(rend,ent);
+	TransformInit(tran,ent,pos,scale,{0,0,0,1});
+	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
+	return ent;
+}
 #endif
