@@ -11,12 +11,6 @@
 #include "camera.h"
 #include "game.h"
 
-#define MIKA 0
-#if MIKA
-#include "Client.h"
-#include "cppincludes.h"
-#endif
-
 static void glfw_error_callback(int e, const char *d) {
 	printf("Error %d: %s\n", e, d);
 }

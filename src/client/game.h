@@ -8,6 +8,58 @@
 #include "utils.h"
 #include "math.h"
 #include "inputs.h"
+
+#define MIKA 1
+#if MIKA
+#include "Client.h"
+#include "cppincludes.h"
+#endif
+
+#define DEFAULT_DYNAMICARRAY_SIZE 6
+static void* get_dynamicArray(const u32 size)
+{
+	u32 allocSize = size*DEFAULT_DYNAMICARRAY_SIZE ;
+	void* ret = malloc(allocSize + sizeof(u32) * 2);
+	if(!ret) return 0;
+	u32* s = (u32*)ret;
+	s[0] = allocSize;
+	s[1] = 0;
+	return &s[2];
+}
+
+static void dispose_dynamicArray(void* arr)
+{
+	u32* start = (u32*)arr;
+	start -= 2;
+	free(start);
+}
+
+#define dynamic_push_back(ARRAY,VALUE) internal_push_dynamicArray((void**)&ARRAY,VALUE,sizeof(*VALUE))
+static inline void internal_push_dynamicArray(void** arr,const void* val,const u32 size)
+{
+	u32* sizes = (u32*)(*arr);
+	sizes -= 2;
+	if(sizes[0] < ((sizes[1] + size))) {
+		sizes[0] *= 2;
+		sizes = (u32*)realloc(sizes,sizes[0] + (sizeof(u32) * 2));
+		if(!sizes){
+			*arr = 0;
+			return;
+		}
+	}
+	u8* start = (u8*)&sizes[2];
+	memcpy(&start[sizes[1]],val,size);
+	sizes[1] += size;
+	*arr = start;
+}
+
+#define dynamic_array_size(ARRAY) internal_dynamic_array_size(ARRAY,sizeof(*ARRAY))
+static u32 inline internal_dynamic_array_size(void* const arr,u32 size) {
+	u32* sizes = (u32*)arr;
+	sizes -= 2;
+	return sizes[1] / size;
+}
+
 struct ThightArray {
 	u8*		start;
 	u32		stride;
@@ -171,7 +223,7 @@ struct ClientObjectTracker {
 };
 
 DECLARECOMPONENT(NetWorkSync,
-		std::vector<ClientObjectTracker> objs;
+		ClientObjectTracker* objs;
 		);
 
 // pushes box to renderer, color
@@ -215,6 +267,7 @@ struct Game {
 	Pool					componentPools[MaxComponent];
 	Input					inputs;
 	// mikan connectio luokka
+	Client					connection;
 };
 
 struct PhysicsWorldData {
@@ -277,7 +330,12 @@ UPDATEFUNC(Physics) {
 }
 
 COMPONENTINIT(Physics,vec3 pos,vec3 scale,quaternion orientation,vec3 angularVelocity) {
-
+	(void)pos;
+	(void)scale;
+	(void)orientation;
+	(void)angularVelocity;
+	(void)comp;
+	(void)ent;
 }
 
 COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
@@ -292,6 +350,13 @@ COMPONENTINIT(Render,Color color) {
 	comp->transform = (TransformComponent*)get_component_from_entity(ent,Transform);
 	ASSERT_MESSAGE(comp->transform,"failed to find transform!!");
 }
+
+COMPONENTINIT(NetWorkSync) {
+	(void)ent;
+	comp->objs = (ClientObjectTracker*)get_dynamicArray(sizeof(ClientObjectTracker));
+}
+
+
 UPDATEFUNC(Render) {
 	render_cube(&game->renderer,comp->transform->pos,
 				comp->transform->scale,comp->transform->orientation,comp->color);
@@ -328,13 +393,15 @@ ClientObjectTracker spawn_network_object(Game* game,const ObjectTracker& track) 
 }
 
 UPDATEFUNC(NetWorkSync) {
-	std::vector<ObjectTracker> serverobjs;
+	const std::vector<ObjectTracker>& serverobjs = game->connection.Objects;
 
 	for(size_t i = 0; i < serverobjs.size();i++) {
-		if(i >= comp->objs.size()) {
+		if(i >= dynamic_array_size(comp->objs)) {
 		// spawn if more objecs have came		
 			ClientObjectTracker temp = spawn_network_object(game,serverobjs[i]);
-			comp->objs.push_back(temp);
+			//internal_push_dynamicArray((void**)&comp->objs,&temp,sizeof(*comp->objs));
+			dynamic_push_back(comp->objs,&temp);
+			//comp->objs.push_back(temp);
 		} else if(serverobjs[i].type != comp->objs[i].track.type) {
 		// (de)spawn if type is different
 			if(serverobjs[i].type != ObjectType::Inactive) {
@@ -354,6 +421,8 @@ UPDATEFUNC(NetWorkSync) {
 	
 
 void update_components(Game* game) {
+	game->connection.Update();
+
 #if 0
 	do { ;
 		CONCAT(Physics,Component)** temp = (CONCAT(Physics,Component)**)(game->updateArrays[Physics].start); 
@@ -387,9 +456,10 @@ void update_components(Game* game) {
 }
 
 
+Entity* get_networksynch_object(Game* game);
 void init_game(Game* game) 
 {
-	memset(game,0,sizeof *game);
+	memset(game,0,(sizeof *game) - sizeof(Client));
 	u32 totalsize = sizeof(Entity) * MAXENTITIES + sizeof(Entity*) * MAXENTITIES;
 	for(u32 i = 0; i < MaxComponent;i++) {
 		if(ENTITY_UPDATES[i]) {
@@ -415,50 +485,13 @@ void init_game(Game* game)
 	}
 
 	// INIT GAMES START COMPONENTS
-	Entity* player = get_player_object(game);
-	Entity* floor = get_floor_object(game,{0,0,0},{5,1,5});
-	(void)player;
-	(void)floor;
-#if 0
-	//Server
-	int id = 0;
-	id++;
+	//Entity* player = get_player_object(game);
+	//Entity* floor = get_floor_object(game,{0,0,0},{5,1,5});
+	Entity* net = get_networksynch_object(game);
+	//(void)player;(void)floor;(void)net;
 
-	// serveri
-	[1 + free {pos,velocity,orientation}],
-	[7 + free {pos,velocity,orientation}],
-	[3 + free {pos,velocity,orientation}],
-	[4 + free {pos,velocity,orientation}],
-	[5 + free {pos,velocity,orientation}],
-	[6 + free {pos,velocity,orientation}]
-
-
-	// clientin
-	[1 + free {pos,velocity,orientation}],
-	[7 + free {pos,velocity,orientation}],
-	[3 + free {pos,velocity,orientation}],
-	[4 + free {pos,velocity,orientation}],
-	[5 + free {pos,velocity,orientation}],
-	[6 + free {pos,velocity,orientation}]
-
-
-
-
-
-
-	//spawn object -> 
-	//Client
-	
-	[1 + type ][7 + type ][3 + type ][4 + type ][5 + type ][6 + type ]
-
-	 {
-		vec of objects : 
-		id			   : 
-	 }
-
-
-	Client lähettää takas pelkän input staten
-#endif
+	game->connection.Init("192.168.1.5",60000, "Loyalisti");
+	game->connection.OpenConnection();
 }
 
 Entity* get_player_object(Game* game) 
@@ -494,6 +527,14 @@ Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale)
 	RenderInit(rend,ent,{0,255,0,1});
 	TransformInit(tran,ent,pos,scale,{0,0,0,1});
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
+	return ent;
+}
+
+Entity* get_networksynch_object(Game* game) {
+	NetWorkSyncComponent* net = (NetWorkSyncComponent*)get_component(game,NetWorkSync);
+	ComponentHeader* components[] = {(ComponentHeader*)net};
+	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+	NetWorkSyncInit(net,ent);
 	return ent;
 }
 #endif

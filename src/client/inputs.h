@@ -41,8 +41,8 @@ struct Input
 {
 	u32			keys;
 	u32			lastkeys;
-	vec2	mpos;
-	vec2	lastmpos;
+	vec2		mpos;
+	vec2		lastmpos;
 	bool		mousebuttons[2];
 	bool		lastmousebuttons[2];
 	bool		inputDisabled;
