@@ -2,6 +2,7 @@
 
 #include "MessageCodes.h"
 #include "inputs.h"
+#include "objecttype.h"
 /*Including basic raknet headeres*/
 #include <raknet/RakPeerInterface.h>
 #include <raknet/MessageIdentifiers.h>
@@ -74,6 +75,8 @@ public:
 	std::vector<btQuaternion> cubeRot;
 	std::vector<int>id;
 	std::vector<int>type;
+
+	std::vector<ObjectTracker> Objects; //Paten objectit
 
 	std::vector<btVector3> playerPos;
 	std::vector<btQuaternion> playerRot;

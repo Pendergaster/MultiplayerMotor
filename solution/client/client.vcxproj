@@ -134,6 +134,7 @@
     <ClInclude Include="..\..\src\client\game.h" />
     <ClInclude Include="..\..\src\client\inputs.h" />
     <ClInclude Include="..\..\src\client\MessageCodes.h" />
+    <ClInclude Include="..\..\src\client\objecttype.h" />
     <ClInclude Include="..\..\src\client\renderer.h" />
     <ClInclude Include="..\..\src\client\tiny_obj_loader.h" />
     <ClInclude Include="..\..\src\client\utils.h" />

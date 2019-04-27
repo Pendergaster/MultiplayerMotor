@@ -53,5 +53,8 @@
     <ClInclude Include="..\..\src\client\camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\client\objecttype.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -263,12 +263,27 @@ void Client::ReadCubeInfo(BitStream* bs)
 	type = vector<int>(i);
 	cubePos = vector<btVector3>(i);
 	cubeRot = vector<btQuaternion>(i);
+
 	for (int x = 0; x < i; x++)
 	{
 		bs->Read(id[x]);
 		bs->Read(type[x]);
 		bs->Read(cubePos[x]);
 		bs->Read(cubeRot[x]);
+
+		ObjectTracker newTracker;
+		newTracker.pos = { cubePos[x].x, cubePos[x].y, cubePos[x].z};
+		newTracker.orientation.scalar = cubeRot[x].getW();
+		newTracker.orientation.i = cubeRot[x].getX();
+		newTracker.orientation.j = cubeRot[x].getY();
+		newTracker.orientation.k = cubeRot[x].getZ();
+
+		newTracker.type = ObjectType::FreeSimulation;
+
+		newTracker.velocity = { 0,0,0 };
+		newTracker.angularVelocity = { 0,0,0 };
+
+		Objects.push_back(newTracker);
 	}
 }
 
