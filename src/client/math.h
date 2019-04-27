@@ -49,6 +49,7 @@ struct  vec3
 {
 	vec3() : x(0),y(0),z(0) {}
 	vec3(float _x,float _y,float _z) : x(_x),y(_y),z(_z) {}
+	vec3(float* unknown) : x(unknown[0]),y(unknown[1]),z(unknown[2]) {}
 	vec3(float val) : x(val),y(val),z(val) {}
 	union
 	{
@@ -103,7 +104,7 @@ struct  vec4
 	vec4() : x(0),y(0),z(0) {}
 	vec4(float _x,float _y,float _z,float _w) : x(_x),y(_y),z(_z),w(_w) {}
 	vec4(const vec3& v,float _w) : x(v.x),y(v.y),z(v.z),w(_w) {}
-
+	vec4(float* unknown) : x(unknown[0]),y(unknown[1]),z(unknown[2]),w(unknown[3]) {}
 	union
 	{
 		struct
@@ -130,6 +131,7 @@ struct quaternion
 {
 	float scalar,i,j,k;
 	quaternion(float _scalar,float _i,float _j,float _k): scalar(_scalar),i(_i),j(_j),k(_k) {};
+	quaternion(float* unknown) : scalar(unknown[0]),i(unknown[1]),j(unknown[2]),k(unknown[3]) {}
 	//https://ipfs.io/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Conversion_between_quaternions_and_Euler_angles.html
 	// Given a rotation vector of form unitRotationAxis * angle,
 	// returns the equivalent quaternion (unitRotationAxis * sin(angle), cos(Angle)).

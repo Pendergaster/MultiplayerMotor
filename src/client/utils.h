@@ -17,6 +17,8 @@ static const u64 numeric_max_u64 = 0xFFFFFFFFFFFFFFFF;
 #define LOG(...) do{printf(LOG_STR __VA_ARGS__ ); \
 printf(" in file : %s:%d \n", __FILE__, __LINE__);} while(0) 
 
+#define ARRAY_SIZE(arr) (sizeof (arr) / sizeof *(arr))
+
 #define ASSERT_MESSAGE(condition,...) do{ if(!(condition)){  LOG(__VA_ARGS__); assert(condition);}}while(0) 
 #define ABORT_MESSAGE(...) do{ LOG(__VA_ARGS__);fflush(stdout); assert(false); }while(0) 
 
@@ -24,9 +26,9 @@ printf(" in file : %s:%d \n", __FILE__, __LINE__);} while(0)
 #define BIT_SET(a,b) ( a |= b)
 #define BIT_UNSET(a,b) (a &= ~b)
 
-#define KILOS(NUM) (NUM * 1000)
-#define MEGAS(NUM) (NUM * 1000000)
-#define GIGAS(NUM) (NUM * 1000000000)
+#define KILOS(NUM) ((NUM) * 1000)
+#define MEGAS(NUM) ((NUM) * 1000000)
+#define GIGAS(NUM) ((NUM) * 1000000000)
 
 #define BETWEEN(a,x,b) (a < x && b > x)
 #define CONCAT_INTERNAL(x,y) x##y

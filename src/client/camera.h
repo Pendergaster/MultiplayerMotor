@@ -57,7 +57,6 @@ static void update_camera(Camera* cam) {
 	up = cross_product(up, cam->direction);
 	normalize(&up);
 
-#if !MIKA
 
 	float cameraSpeed = 0.1f;
 	if (key_down(Key::KEY_W)) {
@@ -73,9 +72,6 @@ static void update_camera(Camera* cam) {
 		cam->position  += normalized(cross_product(cam->direction,
 					up)) * cameraSpeed;
 	}
-
-#endif // MIKA
-
 
 	create_lookat_mat4(&cam->view,cam->position,
 			cam->position + cam->direction,up);
