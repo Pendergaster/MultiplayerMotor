@@ -32,8 +32,10 @@ class Client
 /*PUBLIC FUNCTIONS*/
 public:
 	Client(string IP, int Port,const char* username);
+	Client() {};
 	//Client(){}
 	~Client();
+	void Init(string IP, int Port, const char* username);
 	void Update();
 	void OpenConnection();
 	void CloseConnection();

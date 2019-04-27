@@ -14,6 +14,15 @@ Client::Client(string IP, int Port, const char* username)
 	SetConsoleTitle(title.c_str());
 }
 
+void Client::Init(string IP, int Port, const char* username)
+{
+	this->IP = IP;
+	this->SERVER_PORT = Port;
+	this->username = username;
+	string title = "Raknet-Client";
+	SetConsoleTitle(title.c_str());
+}
+
 Client::~Client()
 {
 	delete SD;

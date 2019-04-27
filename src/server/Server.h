@@ -30,9 +30,9 @@ using namespace std;
 
 struct Cube
 {
-	Cube(int id, int type, btRigidBody* rb) { this->id = id; this->Type = Type; this->rb = rb; };
+	Cube(int id, int type, btRigidBody* rb) { this->id = id; this->type = type; this->rb = rb; };
 	int id;
-	int Type;
+	int type;
 	btRigidBody* rb;
 };
 

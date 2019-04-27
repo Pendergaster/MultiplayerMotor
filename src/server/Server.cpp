@@ -66,7 +66,7 @@ void Server::RemoveSmallCube(int id)
 	{
 		if (smallCubesActive[i].id == id)
 		{
-			smallCubesActive[i].id = smallCubesActive.size() + 1;
+			smallCubesActive[i].id = (int)smallCubesActive.size() + 1;
 			smallCubesActive[i].rb->clearForces();
 			smallCubesActive[i].rb->forceActivationState(WANTS_DEACTIVATION);
 			smallCubesInactive.push_back(smallCubesActive[i]);
@@ -419,7 +419,7 @@ void Server::WriteBulk()
 		for (int i = 0; i < size; i++)
 		{
 			bs.Write(smallCubesActive[i].id);
-			bs.Write(smallCubesActive[i].Type);
+			bs.Write(smallCubesActive[i].type);
 
 			smallCubesActive[i].rb->getMotionState()->getWorldTransform(trans);
 			bs.Write(trans.getOrigin());
@@ -467,7 +467,7 @@ void Server::SendSmallCubeInfo()
 	for (int i = 0; i < size; i++)
 	{
 		bs.Write(smallCubesActive[i].id);
-		bs.Write(smallCubesActive[i].Type);
+		bs.Write(smallCubesActive[i].type);
 
 		smallCubesActive[i].rb->getMotionState()->getWorldTransform(trans);
 		bs.Write(trans.getOrigin());
