@@ -10,7 +10,6 @@ enum class ObjectType : int {
 };
 
 struct ObjectTracker {
-	u32			id;
 	ObjectType	type;
 	vec3		pos;
 	vec3		velocity;

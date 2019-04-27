@@ -287,7 +287,8 @@ COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	comp->orientation = orientation;
 }
 
-COMPONENTINIT(Render) {
+COMPONENTINIT(Render,Color color) {
+	comp->color = color;
 	comp->transform = (TransformComponent*)get_component_from_entity(ent,Transform);
 	ASSERT_MESSAGE(comp->transform,"failed to find transform!!");
 }
@@ -328,6 +329,7 @@ ClientObjectTracker spawn_network_object(Game* game,const ObjectTracker& track) 
 
 UPDATEFUNC(NetWorkSync) {
 	std::vector<ObjectTracker> serverobjs;
+
 	for(size_t i = 0; i < serverobjs.size();i++) {
 		if(i >= comp->objs.size()) {
 		// spawn if more objecs have came		
@@ -465,7 +467,7 @@ Entity* get_player_object(Game* game)
 	TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
 	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
 	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
-	RenderInit(rend,ent);
+	RenderInit(rend,ent,{255,0,0,255});
 	TransformInit(tran,ent,{0,2,0},{1,1,1},{0,0,0,1});
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
@@ -476,7 +478,7 @@ Entity* get_floor_object(Game* game,vec3 pos,vec3 scale)
 	TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
 	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
 	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
-	RenderInit(rend,ent);
+	RenderInit(rend,ent,{255,255,255,255});
 	TransformInit(tran,ent,pos,scale,{0,0,0,1});
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
@@ -489,7 +491,7 @@ Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale)
 	PhysicsComponent* phy = (PhysicsComponent*)get_component(game,Physics);
 	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran,(ComponentHeader*)phy};
 	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
-	RenderInit(rend,ent);
+	RenderInit(rend,ent,{0,255,0,1});
 	TransformInit(tran,ent,pos,scale,{0,0,0,1});
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
