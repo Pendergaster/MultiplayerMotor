@@ -19,13 +19,15 @@ void Client::Init(string IP, int Port, const char* username)
 	this->IP = IP;
 	this->SERVER_PORT = Port;
 	this->username = username;
+	this->Peer = RakNet::RakPeerInterface::GetInstance();
+	this->SD = RakNet::SocketDescriptor(0, 0);
+
 	string title = "Raknet-Client";
 	SetConsoleTitle(title.c_str());
 }
 
 Client::~Client()
 {
-	delete SD;
 }
 
 void Client::CloseConnection()
@@ -38,7 +40,7 @@ void Client::OpenConnection()
 {
 	Peer = RakPeerInterface::GetInstance();
 
-	Peer->Startup(8, SD, 1);
+	Peer->Startup(8, &SD, 1);
 	Peer->SetOccasionalPing(true);
 	Peer->Connect(IP.c_str(),SERVER_PORT, 0, 0);
 

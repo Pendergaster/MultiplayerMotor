@@ -91,9 +91,9 @@ public:
 private:
 
 	RakNet::SystemAddress HostAddress;
-	RakNet::RakPeerInterface* Peer = RakNet::RakPeerInterface::GetInstance();
+	RakNet::RakPeerInterface* Peer;
 	RakNet::Packet* Packet;
-	RakNet::SocketDescriptor* SD = new RakNet::SocketDescriptor(0,0);
+	RakNet::SocketDescriptor SD;
 		
 	std::chrono::system_clock::time_point Delta;
 	float TimeInterval;
