@@ -208,6 +208,7 @@ void Client::SetVar(CustomMessages MessageID, std::vector<int*> Vars)
 	MessageType regType(Type::INT_TYPE,MessageID);
 	registeredServerValues.push_back(regType);
 }
+
 void Client::SetVar(CustomMessages MessageID, std::vector<float*> Vars)
 {
 	Var<float> tmp;
@@ -257,10 +258,15 @@ void Client::ReadCubeInfo(BitStream* bs)
 {
 	int i = 0;
 	bs->Read(i);
+
+	id = vector<int>(i);
+	type = vector<int>(i);
 	cubePos = vector<btVector3>(i);
 	cubeRot = vector<btQuaternion>(i);
 	for (int x = 0; x < i; x++)
 	{
+		bs->Read(id[x]);
+		bs->Read(type[x]);
 		bs->Read(cubePos[x]);
 		bs->Read(cubeRot[x]);
 	}

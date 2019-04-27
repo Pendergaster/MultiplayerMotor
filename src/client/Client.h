@@ -72,6 +72,8 @@ public:
 
 	std::vector<btVector3> cubePos;
 	std::vector<btQuaternion> cubeRot;
+	std::vector<int>id;
+	std::vector<int>type;
 
 	std::vector<btVector3> playerPos;
 	std::vector<btQuaternion> playerRot;
@@ -79,6 +81,7 @@ public:
 
 	vec3 lookDir;
 	inputType input;
+
 /*PRIVATE VARIABLES*/
 private:
 

@@ -30,30 +30,79 @@ void Server::InitBulletWorld()
 	btTransform t;
 	t.setIdentity();
 	t.setOrigin({0,0,0});
-	btStaticPlaneShape* plane = new btStaticPlaneShape(btVector3(0, 1, 0), 0);
+	btBoxShape* platform = new btBoxShape({100,1,100});
 	btMotionState* motion = new btDefaultMotionState(t);
-	btRigidBody::btRigidBodyConstructionInfo info(0.0, motion, plane);
-	planerb = new btRigidBody(info);
+	btRigidBody::btRigidBodyConstructionInfo info(0.0, motion, platform);
+	floor = new btRigidBody(info);
 
 	btVector3 defaultIntertia(0, 0, 0);
 
-	dynamicsWorld->addRigidBody(planerb);
+	dynamicsWorld->addRigidBody(floor);
 
 	for (int x = 0; x < 3; x++) //tehdään cubet mappiin
 	{
 		for (int y = 0; y < 3; y++) //tehdään cubet mappiin
 		{
-			t.setOrigin({(float)x,1,(float)y});
-
-			btBoxShape* box = new btBoxShape({ 1,1,1 });
-			box->calculateLocalInertia(1.0f, defaultIntertia);
-			btMotionState* boxmotion = new btDefaultMotionState(t);
-			btRigidBody::btRigidBodyConstructionInfo boxInfo(1.0f, boxmotion, box, defaultIntertia);
-			btRigidBody* newBox = new btRigidBody(boxInfo);
-			newBox->setFriction(0.1f);
-			cubes.push_back(newBox);
-			dynamicsWorld->addRigidBody(newBox);
+			for (int z = 0; z < 3; z++) //tehdään cubet mappiin
+			{
+				AddCube(1, { (float)x,(float)y,(float)z }, { 0.0f,0.0f,0.0f });
+				//t.setOrigin({ (float)x,(float)z,(float)y });
+				//btBoxShape* box = new btBoxShape({ 0.5,0.5,0.5 });
+				//box->calculateLocalInertia(1.0f, defaultIntertia);
+				//btMotionState* boxmotion = new btDefaultMotionState(t);
+				//btRigidBody::btRigidBodyConstructionInfo boxInfo(0.2f, boxmotion, box, defaultIntertia);
+				//btRigidBody* newBox = new btRigidBody(boxInfo);
+				//newBox->setFriction(0.1f);
+				//cubes.push_back(newBox);
+				//dynamicsWorld->addRigidBody(newBox);
+			}
 		}
+	}
+}
+
+void Server::RemoveSmallCube(int id)
+{
+	for (int i = 0; i < cubes.size(); i++)
+	{
+		if (smallCubesActive[i].id == id)
+		{
+			smallCubesActive[i].id = smallCubesActive.size() + 1;
+			smallCubesActive[i].rb->clearForces();
+			smallCubesActive[i].rb->forceActivationState(WANTS_DEACTIVATION);
+			smallCubesInactive.push_back(smallCubesActive[i]);
+			smallCubesActive.erase(smallCubesActive.begin() + i);
+		}
+	}
+}
+
+void Server::AddCube(int type, vec3 pos, vec3 rot)
+{
+
+	if (smallCubesInactive.size() == 0) //Create new rigidbody for new cube
+	{
+		btTransform t;
+		t.setIdentity();
+		t.setOrigin({pos.x,pos.y,pos.z});
+
+
+		btVector3 defaultIntertia(0, 0, 0);
+		btBoxShape* box = new btBoxShape({ 0.5,0.5,0.5 });
+		box->calculateLocalInertia(0.2f, defaultIntertia);
+
+		btMotionState* boxmotion = new btDefaultMotionState(t);
+		btRigidBody::btRigidBodyConstructionInfo boxInfo(0.2f, boxmotion, box, defaultIntertia);
+		btRigidBody* newBox = new btRigidBody(boxInfo);
+
+		newBox->setFriction(0.1f);
+		dynamicsWorld->addRigidBody(newBox);
+
+		smallCubesActive.push_back(Cube(smallCubesActive.size() + 1, type, newBox));
+	}
+	else
+	{
+		smallCubesActive.push_back(smallCubesInactive[0]); //copy from first inactive to active ones
+		smallCubesActive[smallCubesActive.size() - 1].rb->forceActivationState(ACTIVE_TAG);
+		smallCubesInactive.erase(smallCubesInactive.begin()); 
 	}
 }
 
@@ -69,7 +118,7 @@ void Server::AddPlayerCube(std::string name)
 	t.setOrigin({0,5,0});
 
 	btMotionState* boxmotion = new btDefaultMotionState(t);
-	btRigidBody::btRigidBodyConstructionInfo boxInfo(1.0f, boxmotion, box, defaultIntertia);
+	btRigidBody::btRigidBodyConstructionInfo boxInfo(20.0f, boxmotion, box, defaultIntertia);
 	btRigidBody* newBox = new btRigidBody(boxInfo);
 	newBox->setFriction(0.1f);
 	players.push_back(newBox);
@@ -284,10 +333,6 @@ void Server::SendCubeInfo()
 		cubes[i]->getMotionState()->getWorldTransform(trans);
 		bs.Write(trans.getOrigin());
 		bs.Write(trans.getRotation());
-		if (i == 2)
-		{
-			trans.getOrigin();
-		}
 	}
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
 }
@@ -356,14 +401,27 @@ void Server::WriteBulk()
 	bs.Write((RakNet::MessageID)READ_BULK);
 	//adding cubeinfo data to packet;
 
-	if (cubes.size() != 0)
+	if (smallCubesActive.size() != 0)
 	{
 		bs.Write((RakNet::MessageID)CUBE_INFO);
-		int size = cubes.size();
+		//int size = cubes.size();
+		//bs.Write(size);
+		//for (int i = 0; i < cubes.size(); i++)
+		//{
+		//	cubes[i]->getMotionState()->getWorldTransform(trans);
+		//	bs.Write(trans.getOrigin());
+		//	bs.Write(trans.getRotation());
+		//}
+
+		int size = smallCubesActive.size();
 		bs.Write(size);
-		for (int i = 0; i < cubes.size(); i++)
+
+		for (int i = 0; i < size; i++)
 		{
-			cubes[i]->getMotionState()->getWorldTransform(trans);
+			bs.Write(smallCubesActive[i].id);
+			bs.Write(smallCubesActive[i].Type);
+
+			smallCubesActive[i].rb->getMotionState()->getWorldTransform(trans);
 			bs.Write(trans.getOrigin());
 			bs.Write(trans.getRotation());
 		}
@@ -398,3 +456,31 @@ void Server::ReadPlayerLookDir(RakNet::Packet* packet)
 	}
 }
 
+void Server::SendSmallCubeInfo()
+{
+	RakNet::BitStream bs;
+	btTransform trans;
+	bs.Write((RakNet::MessageID)CUBE_INFO);
+	int size = smallCubesActive.size();
+	bs.Write(size);
+
+	for (int i = 0; i < size; i++)
+	{
+		bs.Write(smallCubesActive[i].id);
+		bs.Write(smallCubesActive[i].Type);
+
+		smallCubesActive[i].rb->getMotionState()->getWorldTransform(trans);
+		bs.Write(trans.getOrigin());
+		bs.Write(trans.getRotation());
+	}
+
+	//for (int i = 0; i < cubes.size(); i++)
+	//{
+	//	cubes[i]->getMotionState()->getWorldTransform(trans);
+	//	bs.Write(trans.getOrigin());
+	//	bs.Write(trans.getRotation());
+	//}
+	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
+
+
+}

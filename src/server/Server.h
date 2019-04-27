@@ -28,6 +28,14 @@
 
 using namespace std;
 
+struct Cube
+{
+	Cube(int id, int type, btRigidBody* rb) { this->id = id; this->Type = Type; this->rb = rb; };
+	int id;
+	int Type;
+	btRigidBody* rb;
+};
+
 class Server
 {
 	/*Public Functions*/
@@ -53,6 +61,12 @@ public:
 	void UpdatePlayerCube(std::string guid,inputType input, vec3 lookDir);
 	void ReadPlayerInput(RakNet::Packet* packet);
 	void ReadPlayerCoord(RakNet::Packet* packet);
+
+	/*Version 2*/
+	void RemoveSmallCube(int id);
+	void AddCube(int type, vec3 pos, vec3 rot);
+	void SendSmallCubeInfo();
+
 	/*Private variables*/
 private:
 	RakNet::Packet* Packet;
@@ -75,8 +89,12 @@ private:
 	chrono::time_point<chrono::system_clock> Delta120;
 	float TimeInterval;
 
+	/*Version 2 small cubes*/
+	std::vector<Cube> smallCubesActive;
+	std::vector<Cube> smallCubesInactive;
+
 	std::vector<btRigidBody*> cubes;
-	btRigidBody* planerb;
+	btRigidBody* floor;
 	std::vector<btRigidBody*> players;
 	std::vector<std::string> slots;
 
@@ -86,5 +104,5 @@ private:
 	btSequentialImpulseConstraintSolver * solver;
 	btDiscreteDynamicsWorld * dynamicsWorld;
 	
-	float MovementSpeedMultiplier = 3;
+	float MovementSpeedMultiplier = 50;
 };
