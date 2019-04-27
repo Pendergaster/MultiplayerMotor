@@ -42,11 +42,13 @@ public:
 	bool AskForVariable(CustomMessages var, string username);
 	void RequestFromAll(CustomMessages var);
 	void SendResponse(RakNet::SystemAddress sys, CustomMessages responseID);
+	void SendSlotID(RakNet::SystemAddress addr, int id);
 	void BroadcastVar(CustomMessages Var, RakNet::Packet Packet);
 	void SendCubeInfo();
 	void ReadBulk(RakNet::Packet* packet);
 	void WriteBulk();
 	void AddPlayerCube(std::string name);
+	void RemovePlayerCube(std::string name);
 
 	void ReadPlayerInput(RakNet::Packet* packet);
 	void ReadPlayerCoord(RakNet::Packet* packet);

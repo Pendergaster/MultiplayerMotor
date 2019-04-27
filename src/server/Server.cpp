@@ -71,16 +71,30 @@ void Server::AddPlayerCube(std::string name)
 
 	btTransform t;
 	t.setIdentity();
-	t.setOrigin({0,0,0});
+	t.setOrigin({0,5,0});
 
 	btMotionState* boxmotion = new btDefaultMotionState(t);
 	btRigidBody::btRigidBodyConstructionInfo boxInfo(1.0f, boxmotion, box, defaultIntertia);
 	btRigidBody* newBox = new btRigidBody(boxInfo);
 	newBox->setFriction(0.1f);
-	players.size();
 	players.push_back(newBox);
 	slots.push_back(name);
 	dynamicsWorld->addRigidBody(newBox);
+}
+
+void Server::RemovePlayerCube(std::string name)
+{
+	if (players.size() != 0)
+	{
+		for (int i = 0; i < players.size(); i++)
+		{
+			if (slots[i] == name)
+			{
+				slots.erase(slots.begin() + i);
+				players.erase(players.begin() + i);
+			}
+		}
+	}
 }
 
 void Server::ServerStart()
@@ -94,7 +108,7 @@ void Server::ServerStart()
 	CONSOLE("Starting server at port " << Port);
 
 	Delta120 = chrono::system_clock::now();
-	TimeInterval = (int)((1.0 / 60) * 1000);
+	TimeInterval = (int)((1.0 / 120) * 1000);
 
 	running = true;
 }
@@ -143,12 +157,14 @@ void Server::CheckPacket(const RakNet::Packet& P)
 		else 
 		{
 			SendResponse(Packet->systemAddress, LOGIN_ACCEPTED);
-			AddPlayerCube(Result);
+			AddPlayerCube(Packet->guid.ToString());
+			SendSlotID(Packet->systemAddress, players.size()-1);
 			CONSOLE(Packet->guid.ToString() << " gave an username " << Result);
 		}
 		break;
 	case ID_CONNECTION_LOST:
 		Connections->RemoveUser(Packet);
+		RemovePlayerCube(Packet->guid.ToString());
 		CONSOLE(Packet->guid.ToString() << " Connection lost");
 		break;
 	case PLAYER_COORD:
@@ -201,10 +217,10 @@ void Server::ReadPlayerInput(RakNet::Packet* packet)
 	bs.Read(d);
 	if (players.size() != 0)
 	{
-		std::string target = Connections->FindUsername(packet->guid.ToString());
+		//std::string target = Connections->FindUsername(packet->guid.ToString());
 		for (int i = 0; i < players.size(); i++)
 		{
-			if (slots[i] == target)
+			if (slots[i] == packet->guid.ToString())
 			{
 				players[i]->activate(true);
 				players[i]->applyCentralForce({ (float)((a-d)*20),0,(float)((w-s)*20) });
@@ -249,6 +265,14 @@ void Server::RequestFromAll(CustomMessages Requested)
 	RakNet::BitStream bs;
 	bs.Write((RakNet::MessageID)Requested);
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
+}
+
+void Server::SendSlotID(RakNet::SystemAddress addr, int id)
+{
+	RakNet::BitStream bs;
+	bs.Write((MessageID)PLAYER_SLOT);
+	bs.Write(id);
+	Peer->Send(&bs, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, addr, false, 0);
 }
 
 void Server::SendCubeInfo()

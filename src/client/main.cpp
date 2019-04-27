@@ -6,7 +6,7 @@
 #include <glad/src/glad.c>
 #include <GLFW/glfw3.h>
 #include "math.h"
-#define MIKA 0
+#define MIKA 1
 #if MIKA
 #include "Client.h"
 #include "cppincludes.h"
@@ -95,8 +95,13 @@ int main(int argc,char* argv[])
 		if (key_down(Key::KEY_S)) { s = 1; }
 		else { s = 0; }
 
-#endif
 		update_camera(&camera);
+
+		if (connection->playerPos.size() > connection->playerSlot)
+		{
+			camera.position = vec3(connection->playerPos[connection->playerSlot].getX(), connection->playerPos[connection->playerSlot].getY()+6,connection->playerPos[connection->playerSlot].getZ());
+		}
+#endif
 
 		if(key_pressed(Key::KEY_E)) { LOG("e pressed\n"); }
 		else if (key_down(Key::KEY_E)) { LOG("e down"); }
@@ -123,7 +128,11 @@ int main(int argc,char* argv[])
 			vec3 pos = vec3(connection->playerPos[i].getX(),connection->playerPos[i].getY(),connection->playerPos[i].getZ());
 			vec3 rots = vec3(connection->playerRot[i].getX(),connection->playerRot[i].getY(),connection->playerRot[i].getZ());
 			quaternion rot = quaternion(rots, connection->playerRot[i].getW());
-			render_cube(&game.renderer, pos, 2, rot, {255,255,0,255});
+			if (i == connection->playerSlot)
+			{
+				printf("%f , %f, %f \n", pos.x, pos.y, pos.z);
+			}
+			render_cube(&renderer, pos, 2, rot, {255,255,0,255});
 		}
 
 #endif

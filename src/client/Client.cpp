@@ -34,7 +34,7 @@ void Client::OpenConnection()
 	Peer->Connect(IP.c_str(),SERVER_PORT, 0, 0);
 
 	Delta = chrono::system_clock::now();
-	TimeInterval = (int)((1.0 / 60) * 1000);
+	TimeInterval = (int)((1.0 / 120) * 1000);
 }
 
 void Client::Update()
@@ -88,6 +88,9 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 	case USERNAME:
 		CheckForVar(USERNAME);
 		CONSOLE("Server is asking for username");
+		break;
+	case PLAYER_SLOT:
+		ReadPlayerSlot(Packet);
 		break;
 	case BALL_UPDATE:
 		ProcessBallUpdate(Packet);
@@ -174,6 +177,14 @@ void Client::CheckForVar(CustomMessages messageID)
 	{
 		Peer->Send(&bs, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
 	}
+}
+
+void Client::ReadPlayerSlot(RakNet::Packet* packet)
+{
+	RakNet::BitStream bs(packet->data,packet->length,0);
+	bs.IgnoreBytes(sizeof(RakNet::MessageID));
+
+	bs.Read(playerSlot);
 }
 
 void Client::SetVar(CustomMessages MessageID, std::vector<int*> Vars)
