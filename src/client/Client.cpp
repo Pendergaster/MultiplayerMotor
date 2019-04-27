@@ -272,7 +272,7 @@ void Client::ReadCubeInfo(BitStream* bs)
 		bs->Read(cubeRot[x]);
 
 		ObjectTracker newTracker;
-		newTracker.pos = { cubePos[x].x, cubePos[x].y, cubePos[x].z};
+		newTracker.pos = { cubePos[x].getX(), cubePos[x].getY(), cubePos[x].getZ()};
 		newTracker.orientation.scalar = cubeRot[x].getW();
 		newTracker.orientation.i = cubeRot[x].getX();
 		newTracker.orientation.j = cubeRot[x].getY();
