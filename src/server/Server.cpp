@@ -161,7 +161,6 @@ void Server::ServerStop()
 {
 	running = false;
 	RakPeerInterface::DestroyInstance(Peer);
-	delete SD;
 	delete Connections;
 }
 
@@ -415,7 +414,6 @@ void Server::WriteBulk()
 
 		int size = smallCubesActive.size();
 		bs.Write(size);
-
 		for (int i = 0; i < size; i++)
 		{
 			bs.Write(smallCubesActive[i].id);

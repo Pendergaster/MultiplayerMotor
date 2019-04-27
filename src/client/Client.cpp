@@ -273,6 +273,7 @@ void Client::ReadCubeInfo(BitStream* bs)
 	id = vector<int>(i);
 	type = vector<int>(i);
 	cubePos = vector<btVector3>(i);
+	Objects.clear();
 	cubeRot = vector<btQuaternion>(i);
 
 	for (int x = 0; x < i; x++)
