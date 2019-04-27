@@ -7,7 +7,7 @@
 #include "utils.h"
 #include "math.h"
 #include "inputs.h"
-
+#include "objecttype.h"
 struct ThightArray {
 	u8*		start;
 	u32		stride;
@@ -150,7 +150,8 @@ struct ComponentHeader {
 #define COMPONENT_TYPES(FUNC)\
 	FUNC(Transform,MAXENTITIES,false)\
 	FUNC(Physics,MAXENTITIES,true)\
-	FUNC(Render,MAXENTITIES,true)
+	FUNC(Render,MAXENTITIES,true)\
+	FUNC(NetWorkSync,1,false)
 
 
 DECLARECOMPONENT(Transform,
@@ -161,6 +162,9 @@ DECLARECOMPONENT(Transform,
 
 // updates transform + physics
 DECLARECOMPONENT(Physics);
+DECLARECOMPONENT(NetWorkSync,
+		//std::vector<>
+		);
 
 // pushes box to renderer, color
 DECLARECOMPONENT(Render,
@@ -348,18 +352,33 @@ void init_game(Game* game)
 	Entity* floor = get_floor_component(game,{0,0,0},{5,1,5});
 	(void)player;
 	(void)floor;
-
+#if 0
 	//Server
 	int id = 0;
 	id++;
 
+	// serveri
+	[1 + free {pos,velocity,orientation}],
+	[7 + free {pos,velocity,orientation}],
+	[3 + free {pos,velocity,orientation}],
+	[4 + free {pos,velocity,orientation}],
+	[5 + free {pos,velocity,orientation}],
+	[6 + free {pos,velocity,orientation}]
 
-	[1 + type {pos,orientation}]
-	[7 + type {pos,orientation}]
-	[3 + type {pos,orientation}]
-	[4 + type {pos,orientation}]
-	[5 + type {pos,orientation}]
-	[6 + type {pos,orientation}]
+
+	// clientin
+	[1 + free {pos,velocity,orientation}],
+	[7 + free {pos,velocity,orientation}],
+	[3 + free {pos,velocity,orientation}],
+	[4 + free {pos,velocity,orientation}],
+	[5 + free {pos,velocity,orientation}],
+	[6 + free {pos,velocity,orientation}]
+
+
+
+
+
+
 	//spawn object -> 
 	//Client
 	
@@ -372,6 +391,7 @@ void init_game(Game* game)
 
 
 	Client lähettää takas pelkän input staten
+#endif
 }
 
 Entity* get_player_component(Game* game) 
