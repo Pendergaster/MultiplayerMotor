@@ -51,4 +51,6 @@ class CleanUpHelp {
 };
 
 #define defer const auto& CONCAT(defer__, __LINE__) = CleanUpHelp() + [&]()
+
+
 #endif //MP_UTILS
