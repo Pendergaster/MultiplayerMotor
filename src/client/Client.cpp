@@ -72,6 +72,7 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 	{
 	case ID_CONNECTION_REQUEST_ACCEPTED:
 		HostAddress = Packet->systemAddress;
+		previousPacketID = 0;
 		CONSOLE("Connection with server at " << IP << " was succesful");
 		Connected = true;
 		SendUsernameForServer(this->username.c_str());
