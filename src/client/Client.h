@@ -79,7 +79,10 @@ public:
 	std::vector<int>type;
 
 	std::vector<ObjectTracker> Objects; //Paten objectit
+
+	int previousPacketID = 0;
 	int packetID = 0;
+	bool isNewData = false; //TÄMÄ KERTOO ONKO UUTTA DATAA TULLUT.
 
 	std::vector<btVector3> playerPos;
 	std::vector<btQuaternion> playerRot;

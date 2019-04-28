@@ -318,8 +318,15 @@ void Client::ReadBulk(RakNet::Packet* packet)
 	bs.IgnoreBytes(sizeof(RakNet::MessageID));
 	RakNet::BitSize_t UsedData = 0;
 	RakNet::MessageID ID;
-	bs.Read(packetID);
-	printf("%i\n", packetID);
+
+	bs.Read(packetID); //Lukee viimeisimmän paketin IDn
+	//printf("%i\n", packetID);
+	if (previousPacketID < packetID)
+	{
+		previousPacketID = packetID;
+		isNewData = true; //switchi joka flippaa kun on saapunut paketti jossa on uutta dataa
+	}
+
 	while (bs.GetNumberOfUnreadBits() != 0)
 	{
 		bs.Read(ID);
