@@ -58,7 +58,7 @@ static void update_camera(Camera* cam) {
 	normalize(&up);
 
 
-	float cameraSpeed = 0.1f;
+	float cameraSpeed = 0.3f;
 	if (key_down(Key::KEY_W)) {
 		cam->position += cam->direction * cameraSpeed;
 	}

@@ -15,6 +15,11 @@
 #include "cppincludes.h"
 #endif
 
+#include <bullet/btBulletDynamicsCommon.h>
+#include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <bullet/BulletDynamics/Dynamics/btDynamicsWorld.h>
+#include <bullet/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+
 #define DEFAULT_DYNAMICARRAY_SIZE 6
 static void* get_dynamicArray(const u32 size)
 {
@@ -201,9 +206,9 @@ struct ComponentHeader {
 #define MAXENTITIES 10000
 #define COMPONENT_TYPES(FUNC)\
 	FUNC(Transform,MAXENTITIES,false)\
-	FUNC(Physics,MAXENTITIES,true)\
 	FUNC(Render,MAXENTITIES,true)\
-	FUNC(NetWorkSync,1,true)
+	FUNC(NetWorkSync,1,true)\
+	FUNC(Physics,MAXENTITIES,true)\
 
 
 DECLARECOMPONENT(Transform,
@@ -213,7 +218,10 @@ DECLARECOMPONENT(Transform,
 
 
 // updates transform + physics
-DECLARECOMPONENT(Physics);
+DECLARECOMPONENT(Physics,
+		btRigidBody*		body;
+		TransformComponent* trans;
+		);
 
 struct ClientObjectTracker {
 	ObjectTracker			track;
@@ -261,13 +269,14 @@ struct Entity {
 };
 
 struct Game {
-	Pool					entities;
-	Renderer				renderer;	
-	ThightArray				updateArrays[MaxComponent];
-	Pool					componentPools[MaxComponent];
-	Input					inputs;
+	Pool						entities;
+	Renderer					renderer;	
+	ThightArray					updateArrays[MaxComponent];
+	Pool						componentPools[MaxComponent];
+	Input						inputs;
 	// mikan connectio luokka
-	Client					connection;
+	Client						connection;
+	btDiscreteDynamicsWorld*	dynamicsWorld;
 };
 
 struct PhysicsWorldData {
@@ -326,16 +335,57 @@ void dispose_entity(Game* game,Entity* ent)
 }
 
 UPDATEFUNC(Physics) {
+	//comp->
+#if 1
 	(void)comp;(void)game;
+	btTransform trans;
+	comp->body->getMotionState()->getWorldTransform(trans);
+	btVector3 origin = trans.getOrigin();
+	btQuaternion q = trans.getRotation();
+
+	comp->trans->pos.x = origin.getX();
+	comp->trans->pos.y = origin.getY();
+	comp->trans->pos.z = origin.getZ();
+	comp->trans->orientation.i = q.getX();
+	comp->trans->orientation.j = q.getY();
+	comp->trans->orientation.k = q.getZ();
+	comp->trans->orientation.scalar = q.getW();
+#endif
 }
 
-COMPONENTINIT(Physics,vec3 pos,vec3 scale,quaternion orientation,vec3 angularVelocity) {
-	(void)pos;
-	(void)scale;
-	(void)orientation;
-	(void)angularVelocity;
-	(void)comp;
-	(void)ent;
+COMPONENTINIT(Physics,btDiscreteDynamicsWorld*	dynamicsWorld,vec3 pos,vec3 scale,
+		quaternion orientation,float _mass) {
+#if 1
+	btTransform groundTransform;
+	groundTransform.setIdentity();
+	groundTransform.setOrigin(btVector3(pos.x,pos.y,pos.z));
+	groundTransform.setRotation(btQuaternion(orientation.i,
+				orientation.j,
+				orientation.k,
+				orientation.scalar));
+	btBoxShape* groundShape = new btBoxShape(btVector3(scale.x,scale.y,scale.z));
+
+	//game->collisionShapes[game->numShapes++] = groundShape; 
+	btScalar mass(_mass);
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	bool isDynamic = (mass != 0.f);
+
+	btVector3 localInertia(0,0,0);
+	if (isDynamic)
+		groundShape->calculateLocalInertia(mass,localInertia);
+
+	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,groundShape,localInertia);
+	btRigidBody* body = new btRigidBody(rbInfo);
+	body->setFriction(floor_friction);
+	//add the body to the dynamics world
+	dynamicsWorld->addRigidBody(body);
+#endif
+	comp->body = body;
+	comp->trans = (TransformComponent*)get_component_from_entity(ent,Transform);
+	ASSERT_MESSAGE(comp->trans,"failed to find transform!!");
+
 }
 
 COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
@@ -357,68 +407,118 @@ COMPONENTINIT(NetWorkSync) {
 }
 
 
+
 UPDATEFUNC(Render) {
 	render_cube(&game->renderer,comp->transform->pos,
-				comp->transform->scale,comp->transform->orientation,comp->color);
+			comp->transform->scale,comp->transform->orientation,comp->color);
 }
 Entity* get_player_object(Game* game);
-Entity* get_floor_object(Game* game,vec3 pos,vec3 scale);
-Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale);
+Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
+Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 
 ClientObjectTracker spawn_network_object(Game* game,const ObjectTracker& track) {
 	ClientObjectTracker ret;
 	ret.track = track;
 	switch(track.type) {
 		case ObjectType::Floor: {
-			Entity* temp = get_floor_object(game,track.pos,floor_scale);
-			ret.ent = temp;
-			ret.physics = NULL;
-			ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
-			ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
-		} break;
+									Entity* temp = get_floor_object(game,track.pos,floor_scale,
+											track.orientation);
+									ret.ent = temp;
+									ret.physics = NULL;
+									ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
+									ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
+								} break;
 		case ObjectType::FreeSimulation: {
-			Entity* temp = get_freesimulation_object(game,track.pos,floor_scale);
-			ret.ent = temp;
-			ret.physics = (PhysicsComponent*)get_component_from_entity(temp,Physics);
-			ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
-			ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
-			ASSERT_MESSAGE(ret.physics,"FAILED TO FIND PHYSICS");
-		} break;
+											 Entity* temp = get_freesimulation_object(game,track.pos,
+													 free_scale,track.orientation);
+											 ret.ent = temp;
+											 ret.physics = (PhysicsComponent*)get_component_from_entity(temp,Physics);
+											 ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
+											 ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
+											 ASSERT_MESSAGE(ret.physics,"FAILED TO FIND PHYSICS");
+										 } break;
 		case ObjectType::Player: {
-		
-		} break;
+
+								 } break;
 		default : ABORT_MESSAGE("unknown object spawning!");
 	}
 	return ret;
 }
 
-UPDATEFUNC(NetWorkSync) {
-	const std::vector<ObjectTracker>& serverobjs = game->connection.Objects;
+static inline void body_reposition( btRigidBody* body,const vec3& pos,const quaternion& orientation,
+		const vec3& linearvel,const vec3& angularvel) {
+	btTransform initialTransform;
 
-	for(size_t i = 0; i < serverobjs.size();i++) {
-		if(i >= dynamic_array_size(comp->objs)) {
-		// spawn if more objecs have came		
-			ClientObjectTracker temp = spawn_network_object(game,serverobjs[i]);
-			//internal_push_dynamicArray((void**)&comp->objs,&temp,sizeof(*comp->objs));
-			dynamic_push_back(comp->objs,&temp);
-			//comp->objs.push_back(temp);
-		} else if(serverobjs[i].type != comp->objs[i].track.type) {
-		// (de)spawn if type is different
-			if(serverobjs[i].type != ObjectType::Inactive) {
+	initialTransform.setOrigin(btVector3(
+				pos.x,
+				pos.y,
+				pos.z));
+	initialTransform.setRotation(btQuaternion(
+				orientation.i,
+				orientation.j,
+				orientation.k,
+				orientation.scalar));
+
+	body->setWorldTransform(initialTransform);
+	btMotionState* motionState = body->getMotionState();
+	body->setWorldTransform(initialTransform);
+
+	body->clearForces();
+	body->setLinearVelocity(btVector3(
+				linearvel.x,
+				linearvel.y,
+				linearvel.z));
+	body->setAngularVelocity(btVector3(
+				angularvel.x,
+				angularvel.y,
+				angularvel.z));
+
+	//body->setWorldTransform(initialTransform);
+	//mMotionState->setWorldTransform(initialTransform);
+};
+
+UPDATEFUNC(NetWorkSync) {
+	if(game->connection.isNewData) {
+		const std::vector<ObjectTracker>& serverobjs = game->connection.Objects;
+		for(size_t i = 0; i < serverobjs.size();i++) {
+			if(i >= dynamic_array_size(comp->objs)) {
+				// spawn if more objecs have came		
 				ClientObjectTracker temp = spawn_network_object(game,serverobjs[i]);
-				comp->objs[i] = temp;
-			} else {
-				dispose_entity(game,comp->objs[i].ent);
-				comp->objs[i].track.type =  ObjectType::Inactive;
+				//internal_push_dynamicArray((void**)&comp->objs,&temp,sizeof(*comp->objs));
+				dynamic_push_back(comp->objs,&temp);
+				//comp->objs.push_back(temp);
+			} else if(serverobjs[i].type != comp->objs[i].track.type) {
+				// (de)spawn if type is different
+				if(serverobjs[i].type != ObjectType::Inactive) {
+					ClientObjectTracker temp = spawn_network_object(game,serverobjs[i]);
+					comp->objs[i] = temp;
+				} else {
+					dispose_entity(game,comp->objs[i].ent);
+					comp->objs[i].track.type =  ObjectType::Inactive;
+				}
+			} else if(comp->objs[i].track.type != ObjectType::Inactive){
+				//sync objects
+				vec3 dist = comp->objs[i].trans->pos - serverobjs[i].pos;
+				float len = lenght(dist);
+				if(len < 0.5f) {
+					continue;
+				} else {
+					//comp->objs[i].trans->pos = serverobjs[i].pos;
+					//comp->objs[i].trans->orientation = serverobjs[i].orientation;
+//static inline void body_reposition( btRigidBody* body,const vec3& pos,const quaternion& orientation,
+
+					//printf("Nopeutta",serverobjs[i].velocity.x,serverobjs[i].velocity.y,serverobjs[i].velocity.z);
+					body_reposition(comp->objs[i].physics->body,serverobjs[i].pos,serverobjs[i].orientation,
+							serverobjs[i].velocity,serverobjs[i].angularVelocity);
+				}
 			}
-		} else if(comp->objs[i].track.type != ObjectType::Inactive){
-		//sych objects
-			comp->objs[i].trans->pos = serverobjs[i].pos;
-			comp->objs[i].trans->orientation = serverobjs[i].orientation;
 		}
+	} else {
+		printf("NO NEW DATA! \n");
 	}
+	game->dynamicsWorld ->stepSimulation (1.f/60.f,10);
 }
-	
+
 
 void update_components(Game* game) {
 	game->connection.Update();
@@ -428,13 +528,13 @@ void update_components(Game* game) {
 		CONCAT(Physics,Component)** temp = (CONCAT(Physics,Component)**)(game->updateArrays[Physics].start); 
 		for(u32 i = 0; i < game->updateArrays[Physics].lastindex; i++) 
 		{ if(temp[i]->header.type != numeric_max_u32) { 
-			CONCAT(Physics,Update)(temp[i],game); 
-		} else { 
-			return_to_pool(&game->componentPools[Physics],temp[i]); 
-			delete_from_tight_array(&game->updateArrays[Physics],i); 
-			i--; 
-		} 
-		
+														  CONCAT(Physics,Update)(temp[i],game); 
+													  } else { 
+														  return_to_pool(&game->componentPools[Physics],temp[i]); 
+														  delete_from_tight_array(&game->updateArrays[Physics],i); 
+														  i--; 
+													  } 
+
 		};
 	} while(0); 
 
@@ -442,11 +542,11 @@ void update_components(Game* game) {
 		CONCAT(Render,Component)** temp = (CONCAT(Render,Component)**)(game->updateArrays[Render].start); 
 		for(u32 i = 0; i < game->updateArrays[Render].lastindex; i++) { 
 			if(temp[i]->header.type != numeric_max_u32){ CONCAT(Render,Update)(temp[i],game); 
-		} else { 
-			return_to_pool(&game->componentPools[Render],temp[i]); 
-			delete_from_tight_array(&game->updateArrays[Render],i); 
-			i--; 
-		} 
+			} else { 
+				return_to_pool(&game->componentPools[Render],temp[i]); 
+				delete_from_tight_array(&game->updateArrays[Render],i); 
+				i--; 
+			} 
 		};
 	} while(0);
 
@@ -492,6 +592,17 @@ void init_game(Game* game)
 
 	game->connection.Init("192.168.1.5",60000, "Loyalisti");
 	game->connection.OpenConnection();
+
+
+	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration(); 
+	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
+	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase ();
+	btSequentialImpulseConstraintSolver* solver = new  btSequentialImpulseConstraintSolver;
+
+	game->dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher ,
+			overlappingPairCache ,solver ,collisionConfiguration);
+
+	game->dynamicsWorld ->setGravity(btVector3 (physics_gravity.x,physics_gravity.y,physics_gravity.z));
 }
 
 Entity* get_player_object(Game* game) 
@@ -505,19 +616,22 @@ Entity* get_player_object(Game* game)
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
 }
-Entity* get_floor_object(Game* game,vec3 pos,vec3 scale) 
+Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation) 
 {
 	RenderComponent* rend = (RenderComponent*)get_component(game,Render);
 	TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
-	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
+	PhysicsComponent* phy = (PhysicsComponent*)get_component(game,Physics);
+	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran,(ComponentHeader*)phy};
 	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
 	RenderInit(rend,ent,{255,255,255,255});
 	TransformInit(tran,ent,pos,scale,{0,0,0,1});
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
+	PhysicsInit(phy,ent,game->dynamicsWorld,pos,scale,orientation,0);
+
 	return ent;
 }
 
-Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale)
+Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation)
 {
 	RenderComponent* rend = (RenderComponent*)get_component(game,Render);
 	TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
@@ -526,6 +640,7 @@ Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale)
 	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
 	RenderInit(rend,ent,{0,255,0,1});
 	TransformInit(tran,ent,pos,scale,{0,0,0,1});
+	PhysicsInit(phy,ent,game->dynamicsWorld,pos,scale,orientation,free_mass);
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
 }
