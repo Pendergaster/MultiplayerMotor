@@ -56,6 +56,7 @@ void Client::Update()
 	{
 		Delta += chrono::milliseconds((int)TimeInterval);
 		SendPlayerState();
+		isNewData = false;
 		for (Packet = Peer->Receive(); Packet != 0; Packet = Peer->Receive())
 		{
 			/*Switch case that lets us check what kind of packet it was*/
