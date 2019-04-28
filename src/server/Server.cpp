@@ -25,7 +25,7 @@ void Server::InitBulletWorld()
 	solver =					new  btSequentialImpulseConstraintSolver;
 	dynamicsWorld =				new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
-	dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
+	dynamicsWorld->setGravity(btVector3(physics_gravity.x,physics_gravity.y,physics_gravity.z));
 
 	AddCube(ObjectType::Floor, { 0.0f,15.0f,0.0f }, { 0.0f,0.0f,0.0f });
 
@@ -82,7 +82,7 @@ void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 		btRigidBody::btRigidBodyConstructionInfo boxInfo(0.0f, boxmotion, box, defaultIntertia);
 		btRigidBody* newBox = new btRigidBody(boxInfo);
 
-		newBox->setFriction(0.1f);
+		newBox->setFriction(floor_friction);
 		dynamicsWorld->addRigidBody(newBox);
 		Floors.push_back(Cube(0, type, newBox));
 	}
@@ -96,13 +96,13 @@ void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 
 			btVector3 defaultIntertia(0, 0, 0);
 			btBoxShape* box = new btBoxShape({free_scale.x, free_scale.y, free_scale.z});
-			box->calculateLocalInertia(0.2f, defaultIntertia);
+			box->calculateLocalInertia(free_mass, defaultIntertia);
 
 			btMotionState* boxmotion = new btDefaultMotionState(t);
-			btRigidBody::btRigidBodyConstructionInfo boxInfo(0.2f, boxmotion, box, defaultIntertia);
+			btRigidBody::btRigidBodyConstructionInfo boxInfo(free_mass, boxmotion, box, defaultIntertia);
 			btRigidBody* newBox = new btRigidBody(boxInfo);
 
-			newBox->setFriction(0.1f);
+			//newBox->setFriction(0.1f);
 			dynamicsWorld->addRigidBody(newBox);
 
 			smallCubesActive.push_back(Cube(smallCubesActive.size() + 1, type, newBox));
@@ -162,7 +162,7 @@ void Server::ServerStart()
 	CONSOLE("Starting server at port " << Port);
 
 	Delta120 = chrono::system_clock::now();
-	TimeInterval = (int)((1.0 / 120) * 1000);
+	TimeInterval = (int)((1.0 / 60) * 1000);
 
 	running = true;
 }
@@ -184,7 +184,7 @@ void Server::ServerUpdate()
 
 		//SendCubeInfo();
 		WriteBulk();
-		dynamicsWorld->stepSimulation(1.0 / 120.0);
+		dynamicsWorld->stepSimulation(1.0 / 60.0, 10);
 
 		for (Packet = Peer->Receive(); Packet; Packet = Peer->Receive())
 		{
