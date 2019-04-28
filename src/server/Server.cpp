@@ -26,18 +26,6 @@ void Server::InitBulletWorld()
 	dynamicsWorld =				new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
 	dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
-	
-	btTransform t;
-	t.setIdentity();
-	t.setOrigin({0,0,0});
-	btBoxShape* platform = new btBoxShape({100,1,100});
-	btMotionState* motion = new btDefaultMotionState(t);
-	btRigidBody::btRigidBodyConstructionInfo info(0.0, motion, platform);
-	floor = new btRigidBody(info);
-
-	btVector3 defaultIntertia(0, 0, 0);
-
-	dynamicsWorld->addRigidBody(floor);
 
 	AddCube(ObjectType::Floor, { 0.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
 
@@ -421,11 +409,14 @@ void Server::WriteBulk()
 
 	bs.Write((RakNet::MessageID)READ_BULK);
 	//adding cubeinfo data to packet;
+	packetID++;
+	if (packetID > 99999) packetID = 0;
+	bs.Write(packetID);
 	
 	if (smallCubesActive.size() != 0 && Floors.size() != 0)
 	{
 		bs.Write((RakNet::MessageID)CUBE_INFO);
-
+		
 		int size = smallCubesActive.size() + Floors.size();
 		bs.Write(size);
 

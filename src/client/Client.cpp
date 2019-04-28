@@ -42,7 +42,7 @@ void Client::OpenConnection()
 
 	Peer->Startup(8, &SD, 1);
 	Peer->SetOccasionalPing(true);
-	Peer->Connect(IP.c_str(),SERVER_PORT, 0, 0);
+	Peer->Connect(IP.c_str(), SERVER_PORT, 0, 0);
 
 	Delta = chrono::system_clock::now();
 	TimeInterval = (int)((1.0 / 60) * 1000);
@@ -59,8 +59,8 @@ void Client::Update()
 		for (Packet = Peer->Receive(); Packet != 0; Packet = Peer->Receive())
 		{
 			/*Switch case that lets us check what kind of packet it was*/
-			ClientConnectionUpdate(Packet); 
-			Peer->DeallocatePacket(Packet); 
+			ClientConnectionUpdate(Packet);
+			Peer->DeallocatePacket(Packet);
 		}
 	}
 }
@@ -134,7 +134,7 @@ void Client::RetryConnection()
 	while (Connected == false)
 	{
 		CONSOLE("RETRYING CONNECTION");
-		Peer->Connect(IP.c_str(),SERVER_PORT, 0, 0);
+		Peer->Connect(IP.c_str(), SERVER_PORT, 0, 0);
 		this_thread::sleep_for(10s);
 	}
 	//thread(&Client::UsernameChange, this).detach();
@@ -148,7 +148,7 @@ void Client::UsernameChange(std::string* username)
 	std::cout << "Anna username :";
 	cin >> newusername;
 	*username = newusername;
-	
+
 	RakNet::BitStream bs;
 	bs.Write((RakNet::MessageID)USERNAME_FOR_GUID);
 	bs.Write(username);
@@ -162,7 +162,7 @@ void Client::CheckForVar(CustomMessages messageID)
 	bool wasregisted = false;
 	for (Var<int> var : IntVars)
 	{
-		if (var.MessageID == messageID) 
+		if (var.MessageID == messageID)
 
 		{
 			wasregisted = true;
@@ -174,7 +174,7 @@ void Client::CheckForVar(CustomMessages messageID)
 	}
 	for (Var<std::string> var : StringVars)
 	{
-		if (var.MessageID == messageID) 
+		if (var.MessageID == messageID)
 		{
 			wasregisted = true;
 			for (std::string* i : var.Values)
@@ -185,7 +185,7 @@ void Client::CheckForVar(CustomMessages messageID)
 	}
 	for (Var<float> var : FloatVars)
 	{
-		if (var.MessageID == messageID) 
+		if (var.MessageID == messageID)
 		{
 			wasregisted = true;
 			for (float* i : var.Values)
@@ -202,7 +202,7 @@ void Client::CheckForVar(CustomMessages messageID)
 
 void Client::ReadPlayerSlot(RakNet::Packet* packet)
 {
-	RakNet::BitStream bs(packet->data,packet->length,0);
+	RakNet::BitStream bs(packet->data, packet->length, 0);
 	bs.IgnoreBytes(sizeof(RakNet::MessageID));
 
 	bs.Read(playerSlot);
@@ -216,7 +216,7 @@ void Client::SetVar(CustomMessages MessageID, std::vector<int*> Vars)
 	tmp.Values = Vars;
 	this->IntVars.push_back(tmp);
 
-	MessageType regType(Type::INT_TYPE,MessageID);
+	MessageType regType(Type::INT_TYPE, MessageID);
 	registeredServerValues.push_back(regType);
 }
 
@@ -228,7 +228,7 @@ void Client::SetVar(CustomMessages MessageID, std::vector<float*> Vars)
 	tmp.Values = Vars;
 	this->FloatVars.push_back(tmp);
 
-	MessageType regType(Type::FLOAT_TYPE,MessageID);
+	MessageType regType(Type::FLOAT_TYPE, MessageID);
 	registeredServerValues.push_back(regType);
 }
 void Client::SetVar(CustomMessages MessageID, std::vector<string*> Vars)
@@ -239,7 +239,7 @@ void Client::SetVar(CustomMessages MessageID, std::vector<string*> Vars)
 	tmp.MessageID = MessageID;
 	this->StringVars.push_back(tmp);
 
-	MessageType regType(Type::STRING_TYPE,MessageID);
+	MessageType regType(Type::STRING_TYPE, MessageID);
 	registeredServerValues.push_back(regType);
 }
 void Client::SendUsernameForServer(RakNet::RakString username)
@@ -248,7 +248,7 @@ void Client::SendUsernameForServer(RakNet::RakString username)
 	BS.Write((RakNet::MessageID)USERNAME_FOR_GUID);
 	BS.Write(username);
 	this->username = username;
-	Peer->Send(&BS, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false,0);
+	Peer->Send(&BS, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
 }
 
 void Client::SendBackCoord(RakNet::Packet* P)
@@ -260,7 +260,7 @@ void Client::SendBackCoord(RakNet::Packet* P)
 
 void Client::ProcessBallUpdate(RakNet::Packet* packet)
 {
-	RakNet::BitStream bs(packet->data,packet->length,0);
+	RakNet::BitStream bs(packet->data, packet->length, 0);
 	bs.IgnoreBytes(sizeof(RakNet::MessageID));
 
 }
@@ -269,11 +269,6 @@ void Client::ReadCubeInfo(BitStream* bs)
 {
 	int i = 0;
 	bs->Read(i);
-
-	//id = vector<int>(i);
-	//type = vector<int>(i);
-	//cubePos = vector<btVector3>(i);
-	//cubeRot = vector<btQuaternion>(i);
 
 	Objects.clear();
 	int id = 0;
@@ -289,7 +284,7 @@ void Client::ReadCubeInfo(BitStream* bs)
 		bs->Read(rot);
 
 		ObjectTracker newTracker;
-		newTracker.pos = { pos.getX(), pos.getY(), pos.getZ()};
+		newTracker.pos = { pos.getX(), pos.getY(), pos.getZ() };
 		newTracker.orientation.scalar = rot.getW();
 		newTracker.orientation.i = rot.getX();
 		newTracker.orientation.j = rot.getY();
@@ -319,10 +314,12 @@ void Client::ReadPlayerInfo(RakNet::BitStream* bs)
 
 void Client::ReadBulk(RakNet::Packet* packet)
 {
-	RakNet::BitStream bs(packet->data,packet->length,0);
+	RakNet::BitStream bs(packet->data, packet->length, 0);
 	bs.IgnoreBytes(sizeof(RakNet::MessageID));
 	RakNet::BitSize_t UsedData = 0;
 	RakNet::MessageID ID;
+	bs.Read(packetID);
+	printf("%i\n", packetID);
 	while (bs.GetNumberOfUnreadBits() != 0)
 	{
 		bs.Read(ID);

@@ -107,4 +107,5 @@ private:
 	btDiscreteDynamicsWorld * dynamicsWorld;
 	
 	float MovementSpeedMultiplier = 50;
+	int packetID = 0;
 };

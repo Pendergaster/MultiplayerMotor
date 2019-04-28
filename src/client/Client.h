@@ -79,6 +79,7 @@ public:
 	std::vector<int>type;
 
 	std::vector<ObjectTracker> Objects; //Paten objectit
+	int packetID = 0;
 
 	std::vector<btVector3> playerPos;
 	std::vector<btQuaternion> playerRot;
