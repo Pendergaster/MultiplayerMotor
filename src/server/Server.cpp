@@ -27,7 +27,7 @@ void Server::InitBulletWorld()
 
 	dynamicsWorld->setGravity(btVector3(physics_gravity.x,physics_gravity.y,physics_gravity.z));
 
-	AddCube(ObjectType::Floor, { 0.0f,15.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 0.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
 
 	for (int x = 0; x < 3; x++) //tehdään cubet mappiin
 	{
@@ -35,7 +35,7 @@ void Server::InitBulletWorld()
 		{
 			for (int z = 0; z < 3; z++) //tehdään cubet mappiin
 			{
-				AddCube(ObjectType::FreeSimulation, { (float)x ,(float)y + 100.0f,(float)z }, { 0.0f,0.0f,0.0f });
+				AddCube(ObjectType::FreeSimulation, { (float)x ,(float)y + 50.0f,(float)z }, { 0.0f,0.0f,0.0f });
 				//t.setOrigin({ (float)x,(float)z,(float)y });
 				//btBoxShape* box = new btBoxShape({ 0.5,0.5,0.5 });
 				//box->calculateLocalInertia(1.0f, defaultIntertia);
@@ -162,7 +162,7 @@ void Server::ServerStart()
 	CONSOLE("Starting server at port " << Port);
 
 	Delta120 = chrono::system_clock::now();
-	TimeInterval = (int)((1.0 / 60) * 1000);
+	TimeInterval = (int)((1.0 / 60.0) * 1000);
 
 	running = true;
 }
@@ -184,7 +184,7 @@ void Server::ServerUpdate()
 
 		//SendCubeInfo();
 		WriteBulk();
-		dynamicsWorld->stepSimulation(1.0 / 60.0, 10);
+		dynamicsWorld->stepSimulation(1.0 / 60.0, 6);
 
 		for (Packet = Peer->Receive(); Packet; Packet = Peer->Receive())
 		{
@@ -209,7 +209,7 @@ void Server::CheckPacket(const RakNet::Packet& P)
 		//else 
 		//{
 		SendResponse(Packet->systemAddress, LOGIN_ACCEPTED);
-		AddPlayerCube(Packet->guid.ToString());
+		//AddPlayerCube(Packet->guid.ToString());
 		SendSlotID(Packet->systemAddress, players.size()-1);
 		CONSOLE(Packet->guid.ToString() << " gave an username " << Result);
 		//}
@@ -397,6 +397,10 @@ void Server::UpdatePlayerCube(std::string guid, inputType input, vec3 lookDir)
 			{
 				//printf("d\n");
 				players[i]->applyCentralForce({cross.x,0,cross.z});
+			}
+			if ((input & (1 << 4)) != 0)
+			{
+				//pelaajan kohdalle. laatikko //forcellea katsomis suuntaan;
 			}
 		}
 	}
