@@ -35,7 +35,7 @@ void Server::InitBulletWorld()
 		{
 			for (int z = 0; z < 3; z++) //tehdään cubet mappiin
 			{
-				AddCube(ObjectType::FreeSimulation, { (float)x,(float)y,(float)z }, { 0.0f,0.0f,0.0f });
+				AddCube(ObjectType::FreeSimulation, { (float)x ,(float)y + 100.0f,(float)z }, { 0.0f,0.0f,0.0f });
 				//t.setOrigin({ (float)x,(float)z,(float)y });
 				//btBoxShape* box = new btBoxShape({ 0.5,0.5,0.5 });
 				//box->calculateLocalInertia(1.0f, defaultIntertia);
@@ -181,10 +181,10 @@ void Server::ServerUpdate()
 	if ((float)Delta.count() > TimeInterval)
 	{
 		Delta120 += chrono::milliseconds((int)TimeInterval);
-		dynamicsWorld->stepSimulation(1.0 / 120.0);
 
 		//SendCubeInfo();
 		WriteBulk();
+		dynamicsWorld->stepSimulation(1.0 / 120.0);
 
 		for (Packet = Peer->Receive(); Packet; Packet = Peer->Receive())
 		{
@@ -428,6 +428,8 @@ void Server::WriteBulk()
 			Floors[i].rb->getMotionState()->getWorldTransform(trans);
 			bs.Write(trans.getOrigin());
 			bs.Write(trans.getRotation());
+			bs.Write(Floors[i].rb->getLinearVelocity());
+			bs.Write(Floors[i].rb->getAngularVelocity());
 		}
 		for (int i = 0; i < smallCubesActive.size(); i++)
 		{
@@ -437,6 +439,8 @@ void Server::WriteBulk()
 			smallCubesActive[i].rb->getMotionState()->getWorldTransform(trans);
 			bs.Write(trans.getOrigin());
 			bs.Write(trans.getRotation());
+			bs.Write(smallCubesActive[i].rb->getLinearVelocity());
+			bs.Write(smallCubesActive[i].rb->getAngularVelocity());
 		}
 	}
 

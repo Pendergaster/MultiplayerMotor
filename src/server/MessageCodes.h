@@ -35,7 +35,7 @@ enum Type
 
 struct MessageType
 {
-	MessageType(Type type, CustomMessages MessageID) { this->type; this->MessageID; }
+	MessageType(Type type, CustomMessages MessageID) { this->type = type; this->MessageID = MessageID; }
 	MessageType() {};
 	Type type;
 	CustomMessages MessageID;

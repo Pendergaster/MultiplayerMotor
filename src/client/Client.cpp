@@ -7,18 +7,19 @@ using namespace std;
 
 Client::Client(string IP, int Port, const char* username)
 {
-	this->IP = IP;
-	this->SERVER_PORT = Port;
-	this->username = username;
+	this->m_ip = IP;
+	this->m_port = Port;
+	this->m_username = username;
 	string title = "Raknet-Client";
 	SetConsoleTitle(title.c_str());
 }
 
-void Client::Init(string IP, int Port, const char* username)
+void Client::Init(std::string IP, int Port, const char* username)
 {
-	this->IP = IP;
-	this->SERVER_PORT = Port;
-	this->username = username;
+	this->m_ip = IP;
+	this->m_ip = "127.0.0.1";
+	this->m_port = Port;
+	this->m_username = username;
 	this->Peer = RakNet::RakPeerInterface::GetInstance();
 	this->SD = RakNet::SocketDescriptor(0, 0);
 
@@ -42,7 +43,7 @@ void Client::OpenConnection()
 
 	Peer->Startup(8, &SD, 1);
 	Peer->SetOccasionalPing(true);
-	Peer->Connect(IP.c_str(), SERVER_PORT, 0, 0);
+	Peer->Connect(m_ip.c_str(), (unsigned short)m_port, 0, 0);
 
 	Delta = chrono::system_clock::now();
 	TimeInterval = (int)((1.0 / 60) * 1000);
@@ -57,11 +58,11 @@ void Client::Update()
 		Delta += chrono::milliseconds((int)TimeInterval);
 		SendPlayerState();
 		isNewData = false;
-		for (Packet = Peer->Receive(); Packet != 0; Packet = Peer->Receive())
+		for (m_packet = Peer->Receive(); m_packet != 0; m_packet = Peer->Receive())
 		{
 			/*Switch case that lets us check what kind of packet it was*/
-			ClientConnectionUpdate(Packet);
-			Peer->DeallocatePacket(Packet);
+			ClientConnectionUpdate(m_packet);
+			Peer->DeallocatePacket(m_packet);
 		}
 	}
 }
@@ -73,12 +74,12 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 	case ID_CONNECTION_REQUEST_ACCEPTED:
 		HostAddress = Packet->systemAddress;
 		previousPacketID = 0;
-		CONSOLE("Connection with server at " << IP << " was succesful");
+		CONSOLE("Connection with server at " << m_ip << " was succesful");
 		Connected = true;
-		SendUsernameForServer(this->username.c_str());
+		SendUsernameForServer(this->m_username.c_str());
 		break;
 	case ID_CONNECTION_LOST:
-		CONSOLE("Connection lost to server at " << IP);
+		CONSOLE("Connection lost to server at " << m_ip);
 		Connected = false;
 		LoggedIn = false;
 		thread(&Client::RetryConnection, this).detach();
@@ -91,12 +92,12 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 		CONSOLE("RECEIVED NEW COORDS FOR GUID" << Packet->guid.ToString());
 		break;
 	case LOGIN_ACCEPTED:
-		CONSOLE("Server accepted our username: " << username);
+		CONSOLE("Server accepted our username: " << m_username);
 		LoggedIn = true;
 		break;
 	case LOGIN_FAILED:
 		CONSOLE("Server did not accept our username");
-		thread(&Client::UsernameChange, this, &username).detach();
+		thread(&Client::UsernameChange, this, &m_username).detach();
 		LoggedIn = false;
 		break;
 	case USERNAME:
@@ -105,9 +106,6 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 		break;
 	case PLAYER_SLOT:
 		ReadPlayerSlot(Packet);
-		break;
-	case BALL_UPDATE:
-		ProcessBallUpdate(Packet);
 		break;
 	case PLAYER_INPUT:
 		break;
@@ -136,7 +134,7 @@ void Client::RetryConnection()
 	while (Connected == false)
 	{
 		CONSOLE("RETRYING CONNECTION");
-		Peer->Connect(IP.c_str(), SERVER_PORT, 0, 0);
+		Peer->Connect(m_ip.c_str(), (unsigned short)m_port, 0, 0);
 		this_thread::sleep_for(10s);
 	}
 	//thread(&Client::UsernameChange, this).detach();
@@ -249,22 +247,8 @@ void Client::SendUsernameForServer(RakNet::RakString username)
 	RakNet::BitStream BS;
 	BS.Write((RakNet::MessageID)USERNAME_FOR_GUID);
 	BS.Write(username);
-	this->username = username;
+	this->m_username = username;
 	Peer->Send(&BS, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
-}
-
-void Client::SendBackCoord(RakNet::Packet* P)
-{
-	RakNet::BitStream bs;
-	bs.Write((MessageID)PLAYER_COORD);
-	Peer->Send(&bs, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
-}
-
-void Client::ProcessBallUpdate(RakNet::Packet* packet)
-{
-	RakNet::BitStream bs(packet->data, packet->length, 0);
-	bs.IgnoreBytes(sizeof(RakNet::MessageID));
-
 }
 
 void Client::ReadCubeInfo(BitStream* bs)
@@ -277,6 +261,8 @@ void Client::ReadCubeInfo(BitStream* bs)
 	ObjectType type;
 	btVector3 pos;
 	btQuaternion rot;
+	btVector3 vel;
+	btVector3 anglvel;
 
 	for (int x = 0; x < i; x++)
 	{
@@ -284,6 +270,8 @@ void Client::ReadCubeInfo(BitStream* bs)
 		bs->Read(type);
 		bs->Read(pos);
 		bs->Read(rot);
+		bs->Read(vel);
+		bs->Read(anglvel);
 
 		ObjectTracker newTracker;
 		newTracker.pos = { pos.getX(), pos.getY(), pos.getZ() };
@@ -294,8 +282,8 @@ void Client::ReadCubeInfo(BitStream* bs)
 
 		newTracker.type = type;
 
-		newTracker.velocity = { 0,0,0 };
-		newTracker.angularVelocity = { 0,0,0 };
+		newTracker.velocity = { vel.getX(), vel.getY(), vel.getZ() };
+		newTracker.angularVelocity = { anglvel.getX(), anglvel.getY(), anglvel.getZ() };
 
 		Objects.push_back(newTracker);
 	}
@@ -318,9 +306,8 @@ void Client::ReadBulk(RakNet::Packet* packet)
 {
 	RakNet::BitStream bs(packet->data, packet->length, 0);
 	bs.IgnoreBytes(sizeof(RakNet::MessageID));
-	RakNet::BitSize_t UsedData = 0;
-	RakNet::MessageID ID;
 
+	RakNet::MessageID ID;
 	bs.Read(packetID); //Lukee viimeisimmän paketin IDn
 	//printf("%i\n", packetID);
 	if (previousPacketID < packetID)

@@ -35,14 +35,13 @@ public:
 	Client() {};
 	//Client(){}
 	~Client();
-	void Init(string IP, int Port, const char* username);
+	void Init(std::string IP, int Port, const char* username);
 	void Update();
 	void OpenConnection();
 	void CloseConnection();
 	void RetryConnection();
 	void SendUsernameForServer(RakNet::RakString username);
-	void SendBackCoord(RakNet::Packet* P);
-	RakNet::RakString GetUsername() { return RakNet::RakString(username.c_str());}
+	RakNet::RakString GetUsername() { return RakNet::RakString(m_username.c_str());}
 	void UsernameChange(std::string* username);
 	void ReadPlayerSlot(RakNet::Packet* packet);
 	void CheckForVar(CustomMessages messageID);
@@ -57,26 +56,21 @@ public:
 /*PRIVATE FUNCTIONS*/
 private:
 	void ClientConnectionUpdate(RakNet::Packet* Packet);
-	void ProcessBallUpdate(RakNet::Packet* packet);
 
 /*PUBLIC VARIABLES*/
 public:
+	std::string m_ip;
+	int m_port;
+	std::string m_username;
+
 	bool Connected = false;
 	bool LoggedIn = false;
-	string IP;
-	int SERVER_PORT;
-	std::string username;
 	bool State = true;
 	vector<Var<int>>IntVars;
 	vector<Var<string>> StringVars;
 	vector<Var<float>> FloatVars;
 	vector<MessageType> registeredServerValues;
 	std::thread BackupThread;
-
-	std::vector<btVector3> cubePos;
-	std::vector<btQuaternion> cubeRot;
-	std::vector<int>id;
-	std::vector<int>type;
 
 	std::vector<ObjectTracker> Objects; //Paten objectit
 
@@ -94,9 +88,10 @@ public:
 /*PRIVATE VARIABLES*/
 private:
 
+
 	RakNet::SystemAddress HostAddress;
 	RakNet::RakPeerInterface* Peer;
-	RakNet::Packet* Packet;
+	RakNet::Packet* m_packet;
 	RakNet::SocketDescriptor SD;
 		
 	std::chrono::system_clock::time_point Delta;
