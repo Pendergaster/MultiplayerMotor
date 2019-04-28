@@ -39,13 +39,15 @@ void Server::InitBulletWorld()
 
 	dynamicsWorld->addRigidBody(floor);
 
+	AddCube(ObjectType::Floor, { 0.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
+
 	for (int x = 0; x < 3; x++) //tehdään cubet mappiin
 	{
 		for (int y = 0; y < 3; y++) //tehdään cubet mappiin
 		{
 			for (int z = 0; z < 3; z++) //tehdään cubet mappiin
 			{
-				AddCube(1, { (float)x,(float)y,(float)z }, { 0.0f,0.0f,0.0f });
+				AddCube(ObjectType::FreeSimulation, { (float)x,(float)y,(float)z }, { 0.0f,0.0f,0.0f });
 				//t.setOrigin({ (float)x,(float)z,(float)y });
 				//btBoxShape* box = new btBoxShape({ 0.5,0.5,0.5 });
 				//box->calculateLocalInertia(1.0f, defaultIntertia);
@@ -75,34 +77,54 @@ void Server::RemoveSmallCube(int id)
 	}
 }
 
-void Server::AddCube(int type, vec3 pos, vec3 rot)
+void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 {
 
-	if (smallCubesInactive.size() == 0) //Create new rigidbody for new cube
+	if (type == ObjectType::Floor)
 	{
 		btTransform t;
 		t.setIdentity();
-		t.setOrigin({pos.x,pos.y,pos.z});
-
+		t.setOrigin({ pos.x,pos.y,pos.z });
 
 		btVector3 defaultIntertia(0, 0, 0);
-		btBoxShape* box = new btBoxShape({ 0.5,0.5,0.5 });
-		box->calculateLocalInertia(0.2f, defaultIntertia);
+		btBoxShape* box = new btBoxShape({ floor_scale.x, floor_scale.y, floor_scale.z });
+		box->calculateLocalInertia(0.0f, defaultIntertia);
 
 		btMotionState* boxmotion = new btDefaultMotionState(t);
-		btRigidBody::btRigidBodyConstructionInfo boxInfo(0.2f, boxmotion, box, defaultIntertia);
+		btRigidBody::btRigidBodyConstructionInfo boxInfo(0.0f, boxmotion, box, defaultIntertia);
 		btRigidBody* newBox = new btRigidBody(boxInfo);
 
 		newBox->setFriction(0.1f);
 		dynamicsWorld->addRigidBody(newBox);
-
-		smallCubesActive.push_back(Cube(smallCubesActive.size() + 1, type, newBox));
+		Floors.push_back(Cube(0, type, newBox));
 	}
-	else
+	if (type == ObjectType::FreeSimulation)
 	{
-		smallCubesActive.push_back(smallCubesInactive[0]); //copy from first inactive to active ones
-		smallCubesActive[smallCubesActive.size() - 1].rb->forceActivationState(ACTIVE_TAG);
-		smallCubesInactive.erase(smallCubesInactive.begin()); 
+		if (smallCubesInactive.size() == 0) //Create new rigidbody for new cube
+		{
+			btTransform t;
+			t.setIdentity();
+			t.setOrigin({pos.x,pos.y,pos.z});
+
+			btVector3 defaultIntertia(0, 0, 0);
+			btBoxShape* box = new btBoxShape({free_scale.x, free_scale.y, free_scale.z});
+			box->calculateLocalInertia(0.2f, defaultIntertia);
+
+			btMotionState* boxmotion = new btDefaultMotionState(t);
+			btRigidBody::btRigidBodyConstructionInfo boxInfo(0.2f, boxmotion, box, defaultIntertia);
+			btRigidBody* newBox = new btRigidBody(boxInfo);
+
+			newBox->setFriction(0.1f);
+			dynamicsWorld->addRigidBody(newBox);
+
+			smallCubesActive.push_back(Cube(smallCubesActive.size() + 1, type, newBox));
+		}
+		else
+		{
+			smallCubesActive.push_back(smallCubesInactive[0]); //copy from first inactive to active ones
+			smallCubesActive[smallCubesActive.size() - 1].rb->forceActivationState(ACTIVE_TAG);
+			smallCubesInactive.erase(smallCubesInactive.begin()); 
+		}
 	}
 }
 
@@ -399,22 +421,24 @@ void Server::WriteBulk()
 
 	bs.Write((RakNet::MessageID)READ_BULK);
 	//adding cubeinfo data to packet;
-
-	if (smallCubesActive.size() != 0)
+	
+	if (smallCubesActive.size() != 0 && Floors.size() != 0)
 	{
 		bs.Write((RakNet::MessageID)CUBE_INFO);
-		//int size = cubes.size();
-		//bs.Write(size);
-		//for (int i = 0; i < cubes.size(); i++)
-		//{
-		//	cubes[i]->getMotionState()->getWorldTransform(trans);
-		//	bs.Write(trans.getOrigin());
-		//	bs.Write(trans.getRotation());
-		//}
 
-		int size = smallCubesActive.size();
+		int size = smallCubesActive.size() + Floors.size();
 		bs.Write(size);
-		for (int i = 0; i < size; i++)
+
+		for (int i = 0; i < Floors.size(); i++)
+		{
+			bs.Write(Floors[i].id);
+			bs.Write(Floors[i].type);
+
+			Floors[i].rb->getMotionState()->getWorldTransform(trans);
+			bs.Write(trans.getOrigin());
+			bs.Write(trans.getRotation());
+		}
+		for (int i = 0; i < smallCubesActive.size(); i++)
 		{
 			bs.Write(smallCubesActive[i].id);
 			bs.Write(smallCubesActive[i].type);

@@ -12,6 +12,7 @@
 #include "UserDatabase.h"
 #include "UserVariables.h"
 #include "inputs.h"
+#include "objecttype.h"
 
 #include "UserDatabase.cpp"
 
@@ -30,9 +31,9 @@ using namespace std;
 
 struct Cube
 {
-	Cube(int id, int type, btRigidBody* rb) { this->id = id; this->type = type; this->rb = rb; };
+	Cube(int id, ObjectType type, btRigidBody* rb) { this->id = id; this->type = type; this->rb = rb; };
 	int id;
-	int type;
+	ObjectType type;
 	btRigidBody* rb;
 };
 
@@ -64,7 +65,7 @@ public:
 
 	/*Version 2*/
 	void RemoveSmallCube(int id);
-	void AddCube(int type, vec3 pos, vec3 rot);
+	void AddCube(ObjectType type, vec3 pos, vec3 rot);
 	void SendSmallCubeInfo();
 
 	/*Private variables*/
@@ -92,6 +93,7 @@ private:
 	/*Version 2 small cubes*/
 	std::vector<Cube> smallCubesActive;
 	std::vector<Cube> smallCubesInactive;
+	std::vector<Cube> Floors;
 
 	std::vector<btRigidBody*> cubes;
 	btRigidBody* floor;

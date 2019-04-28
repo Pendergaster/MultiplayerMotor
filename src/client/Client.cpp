@@ -270,27 +270,32 @@ void Client::ReadCubeInfo(BitStream* bs)
 	int i = 0;
 	bs->Read(i);
 
-	id = vector<int>(i);
-	type = vector<int>(i);
-	cubePos = vector<btVector3>(i);
+	//id = vector<int>(i);
+	//type = vector<int>(i);
+	//cubePos = vector<btVector3>(i);
+	//cubeRot = vector<btQuaternion>(i);
+
 	Objects.clear();
-	cubeRot = vector<btQuaternion>(i);
+	int id = 0;
+	ObjectType type;
+	btVector3 pos;
+	btQuaternion rot;
 
 	for (int x = 0; x < i; x++)
 	{
-		bs->Read(id[x]);
-		bs->Read(type[x]);
-		bs->Read(cubePos[x]);
-		bs->Read(cubeRot[x]);
+		bs->Read(id);
+		bs->Read(type);
+		bs->Read(pos);
+		bs->Read(rot);
 
 		ObjectTracker newTracker;
-		newTracker.pos = { cubePos[x].getX(), cubePos[x].getY(), cubePos[x].getZ()};
-		newTracker.orientation.scalar = cubeRot[x].getW();
-		newTracker.orientation.i = cubeRot[x].getX();
-		newTracker.orientation.j = cubeRot[x].getY();
-		newTracker.orientation.k = cubeRot[x].getZ();
+		newTracker.pos = { pos.getX(), pos.getY(), pos.getZ()};
+		newTracker.orientation.scalar = rot.getW();
+		newTracker.orientation.i = rot.getX();
+		newTracker.orientation.j = rot.getY();
+		newTracker.orientation.k = rot.getZ();
 
-		newTracker.type = ObjectType::FreeSimulation;
+		newTracker.type = type;
 
 		newTracker.velocity = { 0,0,0 };
 		newTracker.angularVelocity = { 0,0,0 };
