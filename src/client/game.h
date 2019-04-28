@@ -206,9 +206,9 @@ struct ComponentHeader {
 #define MAXENTITIES 10000
 #define COMPONENT_TYPES(FUNC)\
 	FUNC(Transform,MAXENTITIES,false)\
-	FUNC(Render,MAXENTITIES,true)\
 	FUNC(NetWorkSync,1,true)\
 	FUNC(Physics,MAXENTITIES,true)\
+	FUNC(Render,MAXENTITIES,true)\
 
 
 DECLARECOMPONENT(Transform,
@@ -354,7 +354,7 @@ UPDATEFUNC(Physics) {
 }
 
 COMPONENTINIT(Physics,btDiscreteDynamicsWorld*	dynamicsWorld,vec3 pos,vec3 scale,
-		quaternion orientation,float _mass) {
+		quaternion orientation,float _mass,float friction) {
 #if 1
 	btTransform groundTransform;
 	groundTransform.setIdentity();
@@ -378,7 +378,7 @@ COMPONENTINIT(Physics,btDiscreteDynamicsWorld*	dynamicsWorld,vec3 pos,vec3 scale
 	btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
 	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,groundShape,localInertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
-	body->setFriction(floor_friction);
+	if(friction != 1) body->setFriction(friction);
 	//add the body to the dynamics world
 	dynamicsWorld->addRigidBody(body);
 #endif
@@ -500,16 +500,29 @@ UPDATEFUNC(NetWorkSync) {
 				//sync objects
 				vec3 dist = comp->objs[i].trans->pos - serverobjs[i].pos;
 				float len = lenght(dist);
-				if(len < 0.5f) {
+				if(len < 0.1f) {
 					continue;
 				} else {
+					if(len < 0.5f) {
+						vec3 newpos = vec_lerp(comp->objs[i].trans->pos,serverobjs[i].pos,0.05f);
+						btVector3 _curVel = comp->objs[i].physics->body->getLinearVelocity();
+						vec3 curVel(_curVel.getX(),_curVel.getY(),_curVel.getZ());
+						vec3 newvel = vec_lerp(curVel,serverobjs[i].velocity,0.05f);
+						body_reposition(comp->objs[i].physics->body,newpos,
+								serverobjs[i].orientation,
+								newvel,
+								serverobjs[i].angularVelocity);
+					} else {
+						body_reposition(comp->objs[i].physics->body,serverobjs[i].pos,
+								serverobjs[i].orientation,
+								serverobjs[i].velocity,
+								serverobjs[i].angularVelocity);
+					}
 					//comp->objs[i].trans->pos = serverobjs[i].pos;
 					//comp->objs[i].trans->orientation = serverobjs[i].orientation;
-//static inline void body_reposition( btRigidBody* body,const vec3& pos,const quaternion& orientation,
+					//static inline void body_reposition( btRigidBody* body,const vec3& pos,const quaternion& orientation,
 
 					//printf("Nopeutta",serverobjs[i].velocity.x,serverobjs[i].velocity.y,serverobjs[i].velocity.z);
-					body_reposition(comp->objs[i].physics->body,serverobjs[i].pos,serverobjs[i].orientation,
-							serverobjs[i].velocity,serverobjs[i].angularVelocity);
 				}
 			}
 		}
@@ -602,7 +615,7 @@ void init_game(Game* game)
 	game->dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher ,
 			overlappingPairCache ,solver ,collisionConfiguration);
 
-	game->dynamicsWorld ->setGravity(btVector3 (physics_gravity.x,physics_gravity.y,physics_gravity.z));
+	game->dynamicsWorld->setGravity(btVector3 (physics_gravity.x,physics_gravity.y,physics_gravity.z));
 }
 
 Entity* get_player_object(Game* game) 
@@ -626,7 +639,7 @@ Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation)
 	RenderInit(rend,ent,{255,255,255,255});
 	TransformInit(tran,ent,pos,scale,{0,0,0,1});
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
-	PhysicsInit(phy,ent,game->dynamicsWorld,pos,scale,orientation,0);
+	PhysicsInit(phy,ent,game->dynamicsWorld,pos,scale,orientation,0,floor_friction);
 
 	return ent;
 }
@@ -640,7 +653,7 @@ Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orie
 	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
 	RenderInit(rend,ent,{0,255,0,1});
 	TransformInit(tran,ent,pos,scale,{0,0,0,1});
-	PhysicsInit(phy,ent,game->dynamicsWorld,pos,scale,orientation,free_mass);
+	PhysicsInit(phy,ent,game->dynamicsWorld,pos,scale,orientation,free_mass,1);
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
 }

@@ -230,6 +230,19 @@ quaternion interpolate_q(quaternion start,quaternion end,float delta)
 		);
 }
 
+static float lerp(float v0, float v1, float t)
+{
+	return (1 - t) * v0 + t * v1;
+}
+
+static inline vec3 vec_lerp(const vec3& source,const vec3& target,float t) {
+	vec3 ret;
+	ret.x = lerp(source.x,target.x,t);
+	ret.y = lerp(source.y,target.y,t);
+	ret.z = lerp(source.z,target.z,t);
+	return ret;
+}
+
 static inline float lenght(const vec3& v)
 {
 	return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z );		
@@ -735,10 +748,6 @@ static inline int irand_range(int range)//inclusive and exclusive
 {
 	int inrange = rand() % range;
 	return inrange;
-}
-static float lerp(float v0, float v1, float t)
-{
-	return (1 - t) * v0 + t * v1;
 }
 static inline int max_val(int lhv,int rhv)
 {
