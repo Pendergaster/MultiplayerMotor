@@ -27,7 +27,7 @@ void Server::InitBulletWorld()
 
 	dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
 
-	AddCube(ObjectType::Floor, { 0.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 0.0f,15.0f,0.0f }, { 0.0f,0.0f,0.0f });
 
 	for (int x = 0; x < 3; x++) //tehdään cubet mappiin
 	{
