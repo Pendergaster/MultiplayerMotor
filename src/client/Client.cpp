@@ -17,7 +17,7 @@ Client::Client(string IP, int Port, const char* username)
 void Client::Init(std::string IP, int Port, const char* username)
 {
 	this->m_ip = IP;
-	this->m_ip = "127.0.0.1";
+	//this->m_ip = "127.0.0.1";
 	this->m_port = Port;
 	this->m_username = username;
 	this->Peer = RakNet::RakPeerInterface::GetInstance();
