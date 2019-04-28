@@ -78,6 +78,9 @@ int main(int argc,char* argv[])
 		while(accumulator >= dt)
 		{
 			accumulator -= dt;
+			if(accumulator > dt) {
+				printf("PERF WARNING!\n");
+			}
 			render_start(&game.renderer);
 			update_camera(&camera);
 			update_components(&game);
