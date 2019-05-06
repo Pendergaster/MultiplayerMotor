@@ -50,7 +50,7 @@ public:
 	void SetVar(CustomMessages MessageID, std::vector<int*>Vars);
 	void ReadBulk(RakNet::Packet* packet);
 	void ReadCubeInfo(RakNet::BitStream* bs);
-	void ReadPlayerInfo(RakNet::BitStream* bs);
+	void ReadPlayerInfo(RakNet::Packet* packet);
 	void SendPlayerState();
 
 /*PRIVATE FUNCTIONS*/
@@ -73,6 +73,7 @@ public:
 	std::thread BackupThread;
 
 	std::vector<ObjectTracker> Objects; //Paten objectit
+	std::vector<PlayerData> Players;
 
 	int previousPacketID = 0;
 	int packetID = 0;
@@ -87,7 +88,6 @@ public:
 
 /*PRIVATE VARIABLES*/
 private:
-
 
 	RakNet::SystemAddress HostAddress;
 	RakNet::RakPeerInterface* Peer;

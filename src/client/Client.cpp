@@ -25,6 +25,7 @@ void Client::Init(std::string IP, int Port, const char* username)
 
 	string title = "Raknet-Client";
 	SetConsoleTitle(title.c_str());
+
 }
 
 Client::~Client()
@@ -113,6 +114,9 @@ CustomMessages Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 		break;
 	case PLAYER_SLOT:
 		ReadPlayerSlot(Packet);
+		break;
+	case PLAYER_INFO:
+		ReadPlayerInfo(Packet);
 		break;
 	case PLAYER_INPUT:
 		break;
@@ -216,6 +220,40 @@ void Client::ReadPlayerSlot(RakNet::Packet* packet)
 	bs.Read(playerSlot);
 }
 
+void Client::ReadPlayerInfo(RakNet::Packet* packet)
+{
+	RakNet::BitStream bs(packet->data, packet->length, 0);
+	bs.IgnoreBytes(sizeof(RakNet::MessageID));
+
+	int size;
+	bs.Read(size);
+
+	PlayerData newData;
+	//std::string name("asd");
+	int score;
+	int id;
+	int playerID;
+	char name[12];
+	//Players.clear();
+	for (int i = 0; i < size; i++)
+	{
+		bs.Read(newData.name,12);
+		bs.Read(newData.score);
+		bs.Read(newData.kuutioId);
+		bs.Read(newData.playerId);
+		//bs.Read(newData, (unsigned int)sizeof(PlayerData));
+		//strcpy(newData.name, name.c_str());
+
+		//bs.Read(name);
+		//bs.Read(score);
+		//bs.Read(id);
+		//bs.Read(playerID);
+
+		Players.push_back(newData);
+	}
+	//name.clear();
+}
+
 void Client::SetVar(CustomMessages MessageID, std::vector<int*> Vars)
 {
 	Var<int> tmp;
@@ -278,8 +316,8 @@ void Client::ReadCubeInfo(BitStream* bs)
 		bs->Read(type);
 		bs->Read(pos);
 		bs->Read(rot);
-		bs->Read(vel);
-		bs->Read(anglvel);
+		//bs->Read(vel);
+		//bs->Read(anglvel);
 
 		ObjectTracker newTracker;
 		newTracker.pos = { pos.getX(), pos.getY(), pos.getZ() };
@@ -290,25 +328,25 @@ void Client::ReadCubeInfo(BitStream* bs)
 
 		newTracker.type = type;
 
-		newTracker.velocity = { vel.getX(), vel.getY(), vel.getZ() };
-		newTracker.angularVelocity = { anglvel.getX(), anglvel.getY(), anglvel.getZ() };
+		//newTracker.velocity = { vel.getX(), vel.getY(), vel.getZ() };
+		//newTracker.angularVelocity = { anglvel.getX(), anglvel.getY(), anglvel.getZ() };
 
 		Objects.push_back(newTracker);
 	}
 }
 
-void Client::ReadPlayerInfo(RakNet::BitStream* bs)
-{
-	int i = 0;
-	bs->Read(i);
-	playerPos = vector<btVector3>(i);
-	playerRot = vector<btQuaternion>(i);
-	for (int x = 0; x < i; x++)
-	{
-		bs->Read(playerPos[x]);
-		bs->Read(playerRot[x]);
-	}
-}
+//void Client::ReadPlayerInfo(RakNet::BitStream* bs)
+//{
+//	int i = 0;
+//	bs->Read(i);
+//	playerPos = vector<btVector3>(i);
+//	playerRot = vector<btQuaternion>(i);
+//	for (int x = 0; x < i; x++)
+//	{
+//		bs->Read(playerPos[x]);
+//		bs->Read(playerRot[x]);
+//	}
+//}
 
 void Client::ReadBulk(RakNet::Packet* packet)
 {
@@ -333,7 +371,7 @@ void Client::ReadBulk(RakNet::Packet* packet)
 			ReadCubeInfo(&bs);
 			break;
 		case PLAYER_INFO:
-			ReadPlayerInfo(&bs);
+			//ReadPlayerInfo(&bs);
 			break;
 		default:
 			return;

@@ -61,13 +61,31 @@ void Server::RemoveSmallCube(int id)
 			smallCubesActive[i].rb->forceActivationState(WANTS_DEACTIVATION);
 			smallCubesInactive.push_back(smallCubesActive[i]);
 			smallCubesActive.erase(smallCubesActive.begin() + i);
+
 		}
 	}
 }
 
 void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 {
+	if (type == ObjectType::Player)
+	{
+		btTransform t;
+		t.setIdentity();
+		t.setOrigin({ pos.x,pos.y,pos.z });
 
+		btVector3 defaultIntertia(0, 0, 0);
+		btBoxShape* box = new btBoxShape({ player_scale.x, player_scale.y, player_scale.z });
+		box->calculateLocalInertia(free_mass, defaultIntertia);
+
+		btMotionState* boxmotion = new btDefaultMotionState(t);
+		btRigidBody::btRigidBodyConstructionInfo boxInfo(free_mass, boxmotion, box, defaultIntertia);
+		btRigidBody* newBox = new btRigidBody(boxInfo);
+
+		dynamicsWorld->addRigidBody(newBox);
+		Players.push_back(Cube(Players.size()+Floors.size()+smallCubesActive.size() + 1, type, newBox));
+		Score.push_back(0);
+	}
 	if (type == ObjectType::Floor)
 	{
 		btTransform t;
@@ -82,9 +100,11 @@ void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 		btRigidBody::btRigidBodyConstructionInfo boxInfo(0.0f, boxmotion, box, defaultIntertia);
 		btRigidBody* newBox = new btRigidBody(boxInfo);
 
+
 		newBox->setFriction(floor_friction);
 		dynamicsWorld->addRigidBody(newBox);
-		Floors.push_back(Cube(0, type, newBox));
+		Floors.push_back(Cube(Players.size()+Floors.size()+smallCubesActive.size() + 1, type, newBox));
+		
 	}
 	if (type == ObjectType::FreeSimulation)
 	{
@@ -105,7 +125,7 @@ void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 			//newBox->setFriction(0.1f);
 			dynamicsWorld->addRigidBody(newBox);
 
-			smallCubesActive.push_back(Cube(smallCubesActive.size() + 1, type, newBox));
+			smallCubesActive.push_back(Cube(Players.size()+Floors.size()+smallCubesActive.size() + 1, type, newBox));
 		}
 		else
 		{
@@ -131,22 +151,19 @@ void Server::AddPlayerCube(std::string name)
 	btRigidBody::btRigidBodyConstructionInfo boxInfo(20.0f, boxmotion, box, defaultIntertia);
 	btRigidBody* newBox = new btRigidBody(boxInfo);
 	newBox->setFriction(0.1f);
-	players.push_back(newBox);
+	//players.push_back(newBox);
 	slots.push_back(name);
 	dynamicsWorld->addRigidBody(newBox);
 }
 
 void Server::RemovePlayerCube(std::string name)
 {
-	if (players.size() != 0)
+	for (int i = 0; i < Players.size(); i++)
 	{
-		for (int i = 0; i < players.size(); i++)
+		if (slots[i] == name)
 		{
-			if (slots[i] == name)
-			{
-				slots.erase(slots.begin() + i);
-				players.erase(players.begin() + i);
-			}
+			slots.erase(slots.begin() + i);
+			Players.erase(Players.begin() + i);
 		}
 	}
 }
@@ -184,6 +201,7 @@ void Server::ServerUpdate()
 
 		//SendCubeInfo();
 		WriteBulk();
+		SendPlayerInfo();
 		dynamicsWorld->stepSimulation(1.0 / 30.0,8);
 
 		for (Packet = Peer->Receive(); Packet; Packet = Peer->Receive())
@@ -204,15 +222,10 @@ void Server::CheckPacket(const RakNet::Packet& P)
 		break;
 	case USERNAME_FOR_GUID:
 		Result = Connections->RegisterGuid(Packet);
-		//if (Result == "RECONNECT") { SendResponse(Packet->systemAddress, LOGIN_ACCEPTED); CONSOLE("ID: " << Packet->guid.ToString() << " reconnected"); break; }
-		//if (Result == "NONE") { SendResponse(Packet->systemAddress, LOGIN_FAILED); CONSOLE("ID: " << Packet->guid.ToString() << " failed to give username"); break; }
-		//else 
-		//{
 		SendResponse(Packet->systemAddress, LOGIN_ACCEPTED);
-		//AddPlayerCube(Packet->guid.ToString());
-		SendSlotID(Packet->systemAddress, players.size()-1);
+		AddCube(ObjectType::Player, { 3,3,0 }, { 0,0,0 }); //We create cube for player
+		slots.push_back(Packet->guid.ToString()); //we save its guid.
 		CONSOLE(Packet->guid.ToString() << " gave an username " << Result);
-		//}
 		break;
 	case ID_CONNECTION_LOST:
 		Connections->RemoveUser(Packet);
@@ -270,18 +283,18 @@ void Server::ReadPlayerInput(RakNet::Packet* packet)
 	bs.Read(a);
 	bs.Read(s);
 	bs.Read(d);
-	if (players.size() != 0)
-	{
-		//std::string target = Connections->FindUsername(packet->guid.ToString());
-		for (int i = 0; i < players.size(); i++)
-		{
-			if (slots[i] == packet->guid.ToString())
-			{
-				players[i]->activate(true);
-				players[i]->applyCentralForce({ (float)((a-d)*20),0,(float)((w-s)*20) });
-			}
-		}
-	}
+	//if (players.size() != 0)
+	//{
+	//	//std::string target = Connections->FindUsername(packet->guid.ToString());
+	//	for (int i = 0; i < players.size(); i++)
+	//	{
+	//		if (slots[i] == packet->guid.ToString())
+	//		{
+	//			players[i]->activate(true);
+	//			players[i]->applyCentralForce({ (float)((a-d)*20),0,(float)((w-s)*20) });
+	//		}
+	//	}
+	//}
 	//TODO(mika) handlaa inputit;
 	//printf("w: %i, a: %i, s: %i, d: %i, from: %s\n",w,a,s,d,packet->guid.ToString());
 }
@@ -367,11 +380,11 @@ void Server::UpdatePlayerCube(std::string guid, inputType input, vec3 lookDir)
 {
 	//W = 22, A = 0, S = 18, D = 3
 	//Check Input
-	for (int i = 0; i < players.size(); i++)
+	for (int i = 0; i < Players.size(); i++)
 	{
 		if (slots[i] == guid)
 		{
-			players[i]->activate(true);
+			Players[i].rb->activate(true);
 			vec3 cross = cross_product(lookDir, { 0,1,0 });
 			cross = normalized(cross);
 
@@ -381,22 +394,22 @@ void Server::UpdatePlayerCube(std::string guid, inputType input, vec3 lookDir)
 			if ((input & (1 << 22)) != 0)
 			{
 				//printf("w\n");
-				players[i]->applyCentralForce({lookDir.x,0,lookDir.z});
+				Players[i].rb->applyCentralForce({lookDir.x,0,lookDir.z});
 			}
 			if ((input & (1 << 18)) != 0)
 			{
 				//printf("s\n");
-				players[i]->applyCentralForce({-lookDir.x,0,-lookDir.z});
+				Players[i].rb->applyCentralForce({-lookDir.x,0,-lookDir.z});
 			}
 			if ((input & (1 << 0)) != 0)
 			{
 				//printf("a\n");
-				players[i]->applyCentralForce({-cross.x,0,-cross.z});
+				Players[i].rb->applyCentralForce({-cross.x,0,-cross.z});
 			}
 			if ((input & (1 << 3)) != 0)
 			{
 				//printf("d\n");
-				players[i]->applyCentralForce({cross.x,0,cross.z});
+				Players[i].rb->applyCentralForce({cross.x,0,cross.z});
 			}
 			if ((input & (1 << 4)) != 0)
 			{
@@ -417,11 +430,11 @@ void Server::WriteBulk()
 	if (packetID > 99999) packetID = 0;
 	bs.Write(packetID);
 	
-	if (smallCubesActive.size() != 0 && Floors.size() != 0)
+	if (smallCubesActive.size() != 0 || Floors.size() != 0 || Players.size() != 0)
 	{
 		bs.Write((RakNet::MessageID)CUBE_INFO);
 		
-		int size = smallCubesActive.size() + Floors.size();
+		int size = smallCubesActive.size() + Floors.size() + Players.size();
 		bs.Write(size);
 
 		for (int i = 0; i < Floors.size(); i++)
@@ -432,8 +445,8 @@ void Server::WriteBulk()
 			Floors[i].rb->getMotionState()->getWorldTransform(trans);
 			bs.Write(trans.getOrigin());
 			bs.Write(trans.getRotation());
-			bs.Write(Floors[i].rb->getLinearVelocity());
-			bs.Write(Floors[i].rb->getAngularVelocity());
+			//bs.Write(Floors[i].rb->getLinearVelocity());
+			//bs.Write(Floors[i].rb->getAngularVelocity());
 		}
 		for (int i = 0; i < smallCubesActive.size(); i++)
 		{
@@ -443,24 +456,49 @@ void Server::WriteBulk()
 			smallCubesActive[i].rb->getMotionState()->getWorldTransform(trans);
 			bs.Write(trans.getOrigin());
 			bs.Write(trans.getRotation());
-			bs.Write(smallCubesActive[i].rb->getLinearVelocity());
-			bs.Write(smallCubesActive[i].rb->getAngularVelocity());
+			//bs.Write(smallCubesActive[i].rb->getLinearVelocity());
+			//bs.Write(smallCubesActive[i].rb->getAngularVelocity());
 		}
-	}
-
-	if (players.size() != 0)
-	{
-		bs.Write((RakNet::MessageID)PLAYER_INFO);
-		int size = players.size();
-		bs.Write(size);
-		for (int i = 0; i < players.size(); i++)
+		for (int i = 0; i < Players.size(); i++)
 		{
-			players[i]->getMotionState()->getWorldTransform(trans);
+			bs.Write(Players[i].id);
+			bs.Write(Players[i].type);
+
+			Players[i].rb->getMotionState()->getWorldTransform(trans);
 			bs.Write(trans.getOrigin());
 			bs.Write(trans.getRotation());
 		}
 	}
+
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
+}
+
+void Server::SendPlayerInfo()
+{
+	RakNet::BitStream bs;
+
+	bs.Write((MessageID)PLAYER_INFO);
+	int size = Players.size();
+	bs.Write(size); //how many players we got
+	string name;
+	int score = 0;
+	int id = 0;
+
+	for (int i = 0; i < Players.size(); i++)
+	{
+		name = Connections->FindUsername(slots[i]);
+		char name2[12];
+		strcpy(name2, name.c_str());
+		id = Players[i].id;
+		bs.Write(name2,12);
+		bs.Write((score+1));
+		bs.Write(id);
+		bs.Write((i+1)); //TODO_MIKA: tee pelaaja slotit toimiviksi;
+	}
+	if (size != 0)
+	{
+		Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
+	}
 }
 
 void Server::ReadPlayerLookDir(RakNet::Packet* packet)
