@@ -6,6 +6,7 @@
 #include "utils.h"
 #include <imgui/imgui.h>
 typedef u32 inputType;
+
 enum class Key : inputType
 {
 	KEY_A = 1 << 0/*= GLFW_KEY_A*/,
@@ -46,7 +47,6 @@ struct Input
 	bool		mousebuttons[2];
 	bool		lastmousebuttons[2];
 	bool		inputDisabled;
-	bool		inited;
 };
 
 void set_key_down(int key,Input* in)
@@ -97,11 +97,13 @@ void mouse_callback(GLFWwindow* window, int button, int action, int re)
 	} 
 	ImGui_ImplGlfw_MouseButtonCallback(window,button,action,re);
 }
+
 void cursor_position_callback(GLFWwindow* window,double xpos , double ypos)
 {
 	Input* in = (Input*)glfwGetWindowUserPointer(window);
-	if(!in->inited) {
-		in->inited = true;
+	static bool	inited = false;
+	if(!inited) {
+		inited = true;
 		in->lastmpos = vec2((float)xpos,(float)ypos);	
 	} 
 	in->mpos = vec2((float)xpos,(float)ypos);	
