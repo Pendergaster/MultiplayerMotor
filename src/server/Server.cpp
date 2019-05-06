@@ -25,9 +25,9 @@ void Server::InitBulletWorld()
 	solver =					new  btSequentialImpulseConstraintSolver;
 	dynamicsWorld =				new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
-	dynamicsWorld->setGravity(btVector3(0, -4.f, 0));
+	dynamicsWorld->setGravity(btVector3(physics_gravity.x,physics_gravity.y,physics_gravity.z));
 
-	AddCube(ObjectType::Floor, { 0.0f,15.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 0.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
 
 	for (int x = 0; x < 3; x++) //tehdään cubet mappiin
 	{
@@ -35,7 +35,7 @@ void Server::InitBulletWorld()
 		{
 			for (int z = 0; z < 3; z++) //tehdään cubet mappiin
 			{
-				AddCube(ObjectType::FreeSimulation, { (float)x ,(float)y + 100.0f,(float)z }, { 0.0f,0.0f,0.0f });
+				AddCube(ObjectType::FreeSimulation, { (float)x ,(float)y + 50.0f,(float)z }, { 0.0f,0.0f,0.0f });
 				//t.setOrigin({ (float)x,(float)z,(float)y });
 				//btBoxShape* box = new btBoxShape({ 0.5,0.5,0.5 });
 				//box->calculateLocalInertia(1.0f, defaultIntertia);
@@ -82,7 +82,7 @@ void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 		btRigidBody::btRigidBodyConstructionInfo boxInfo(0.0f, boxmotion, box, defaultIntertia);
 		btRigidBody* newBox = new btRigidBody(boxInfo);
 
-		newBox->setFriction(0.1f);
+		newBox->setFriction(floor_friction);
 		dynamicsWorld->addRigidBody(newBox);
 		Floors.push_back(Cube(0, type, newBox));
 	}
@@ -96,13 +96,13 @@ void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 
 			btVector3 defaultIntertia(0, 0, 0);
 			btBoxShape* box = new btBoxShape({free_scale.x, free_scale.y, free_scale.z});
-			box->calculateLocalInertia(0.2f, defaultIntertia);
+			box->calculateLocalInertia(free_mass, defaultIntertia);
 
 			btMotionState* boxmotion = new btDefaultMotionState(t);
-			btRigidBody::btRigidBodyConstructionInfo boxInfo(0.2f, boxmotion, box, defaultIntertia);
+			btRigidBody::btRigidBodyConstructionInfo boxInfo(free_mass, boxmotion, box, defaultIntertia);
 			btRigidBody* newBox = new btRigidBody(boxInfo);
 
-			newBox->setFriction(0.1f);
+			//newBox->setFriction(0.1f);
 			dynamicsWorld->addRigidBody(newBox);
 
 			smallCubesActive.push_back(Cube(smallCubesActive.size() + 1, type, newBox));
@@ -209,7 +209,7 @@ void Server::CheckPacket(const RakNet::Packet& P)
 		//else 
 		//{
 		SendResponse(Packet->systemAddress, LOGIN_ACCEPTED);
-		AddPlayerCube(Packet->guid.ToString());
+		//AddPlayerCube(Packet->guid.ToString());
 		SendSlotID(Packet->systemAddress, players.size()-1);
 		CONSOLE(Packet->guid.ToString() << " gave an username " << Result);
 		//}
@@ -397,6 +397,10 @@ void Server::UpdatePlayerCube(std::string guid, inputType input, vec3 lookDir)
 			{
 				//printf("d\n");
 				players[i]->applyCentralForce({cross.x,0,cross.z});
+			}
+			if ((input & (1 << 4)) != 0)
+			{
+				//pelaajan kohdalle. laatikko //forcellea katsomis suuntaan;
 			}
 		}
 	}
