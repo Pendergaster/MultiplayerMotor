@@ -142,7 +142,6 @@ void init_inputs(Input* in,GLFWwindow* win)
 	in->mousebuttons[0] = false;
 	in->mousebuttons[1] = false;
 	set_input_context(in);
-	in->inited = false;
 	g_window = win;
 }
 void update_keys(Input* in)

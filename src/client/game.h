@@ -434,7 +434,7 @@ bool update_components(Game* game) {
 	static bool	loggedIn = false;
 	if(!loggedIn) {
 		static bool	triedToLog = false;
-		static char buf1[64] = ""; 
+		static char buf1[12] = ""; 
 		static char name[64] = ""; 
 		static int port = 0;
 		if(!triedToLog) {
@@ -450,7 +450,7 @@ bool update_components(Game* game) {
 					fileLoaded = true;
 				}
 			}
-			ImGui::InputText("name", name, 64);
+			ImGui::InputText("name", name, 12);
 			ImGui::InputText("address", buf1, 64);
             ImGui::InputInt("port", &port, 1);
 			if (ImGui::Button("Log in")) {
