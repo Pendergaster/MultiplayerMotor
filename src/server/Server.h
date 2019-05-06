@@ -67,6 +67,7 @@ public:
 	void RemoveSmallCube(int id);
 	void AddCube(ObjectType type, vec3 pos, vec3 rot);
 	void SendSmallCubeInfo();
+	void SendPlayerInfo();
 
 	/*Private variables*/
 private:
@@ -94,10 +95,11 @@ private:
 	std::vector<Cube> smallCubesActive;
 	std::vector<Cube> smallCubesInactive;
 	std::vector<Cube> Floors;
+	std::vector<Cube> Players;
+	std::vector<int> Score;
 
 	std::vector<btRigidBody*> cubes;
 	btRigidBody* floor;
-	std::vector<btRigidBody*> players;
 	std::vector<std::string> slots;
 
 	btDefaultCollisionConfiguration* collisionConfiguration;
