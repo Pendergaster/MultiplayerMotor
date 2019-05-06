@@ -205,12 +205,17 @@ struct ComponentHeader {
 	FUNC(Transform,MAXENTITIES,false)\
 	FUNC(NetWorkSync,1,true)\
 	FUNC(Render,MAXENTITIES,true)\
+	FUNC(PlayerCamera,1,true)\
 
 
 DECLARECOMPONENT(Transform,
 		vec3 pos,scale;
 		quaternion orientation;
 		);
+
+DECLARECOMPONENT(PlayerCamera,
+		);
+
 
 struct ClientObjectTracker {
 	ObjectTracker			track;
@@ -345,12 +350,15 @@ COMPONENTINIT(NetWorkSync) {
 	comp->currentTime = glfwGetTime();
 }
 
-
-
 UPDATEFUNC(Render) {
 	render_cube(&game->renderer,comp->transform->pos,
 			comp->transform->scale,comp->transform->orientation,comp->color);
 }
+
+UPDATEFUNC(PlayerCamera) {
+	(void)comp;(void)game;
+}
+
 Entity* get_player_object(Game* game,int cubeId,const std::vector<PlayerData>& data);
 Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
@@ -539,7 +547,8 @@ Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& d
 	}
 	Entity* ent = NULL;
 	if(playerFound) {
-		ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
+		PlayerCameraComponent* cam = (PlayerCameraComponent*)get_component(game,PlayerCamera);
+		ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran,(ComponentHeader*)cam};
 		ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
 	} else {
 		ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
@@ -580,7 +589,7 @@ Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orie
 	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
 	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
 	RenderInit(rend,ent,{0,255,0,1});
-	TransformInit(tran,ent,pos,scale,{0,0,0,1});
+	TransformInit(tran,ent,pos,scale,orientation);
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
 }
