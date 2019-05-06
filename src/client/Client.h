@@ -36,7 +36,7 @@ public:
 	//Client(){}
 	~Client();
 	void Init(std::string IP, int Port, const char* username);
-	void Update();
+	CustomMessages Update();
 	void OpenConnection();
 	void CloseConnection();
 	void RetryConnection();
@@ -55,7 +55,7 @@ public:
 
 /*PRIVATE FUNCTIONS*/
 private:
-	void ClientConnectionUpdate(RakNet::Packet* Packet);
+	CustomMessages ClientConnectionUpdate(RakNet::Packet* Packet);
 
 /*PUBLIC VARIABLES*/
 public:

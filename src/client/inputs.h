@@ -3,8 +3,8 @@
 //#include <glm/glm.hpp>
 #include "math.h"
 #include <GLFW/glfw3.h>
-
 #include "utils.h"
+#include <imgui/imgui.h>
 typedef u32 inputType;
 enum class Key : inputType
 {
@@ -46,6 +46,7 @@ struct Input
 	bool		mousebuttons[2];
 	bool		lastmousebuttons[2];
 	bool		inputDisabled;
+	bool		inited;
 };
 
 void set_key_down(int key,Input* in)
@@ -64,7 +65,7 @@ void set_key_up(int key,Input* in)
 	}
 }
 
-void key_callback(GLFWwindow* window, int key, int , int action, int )
+void key_callback(GLFWwindow* window, int key, int ro, int action, int re)
 {
 	Input* in = (Input*)glfwGetWindowUserPointer(window);
 	if (action == GLFW_PRESS) {
@@ -73,9 +74,10 @@ void key_callback(GLFWwindow* window, int key, int , int action, int )
 	else if (action == GLFW_RELEASE) {
 		set_key_up(key,in);
 	}
+	ImGui_ImplGlfw_KeyCallback(window,key,ro,action,re);
 }
 
-void mouse_callback(GLFWwindow* window, int button, int action, int )
+void mouse_callback(GLFWwindow* window, int button, int action, int re)
 {
 	Input* in = (Input*)glfwGetWindowUserPointer(window);
 	if(button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -93,20 +95,41 @@ void mouse_callback(GLFWwindow* window, int button, int action, int )
 			in->mousebuttons[1] = false;
 		}
 	} 
+	ImGui_ImplGlfw_MouseButtonCallback(window,button,action,re);
 }
 void cursor_position_callback(GLFWwindow* window,double xpos , double ypos)
 {
 	Input* in = (Input*)glfwGetWindowUserPointer(window);
+	if(!in->inited) {
+		in->inited = true;
+		in->lastmpos = vec2((float)xpos,(float)ypos);	
+	} 
 	in->mpos = vec2((float)xpos,(float)ypos);	
 }
 
+GLFWwindow* g_window = NULL;
 static Input* g_inputs = NULL;
+void activate_cursor() {
+	g_inputs->inputDisabled = true;
+	glfwSetInputMode(g_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); 
+}
+
+void disable_cursor() {
+	g_inputs->inputDisabled = false;
+	glfwSetInputMode(g_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); 
+}
+
+bool is_input_active() {
+	return g_inputs->inputDisabled;
+}
+
+
 static void set_input_context(Input* inputs)
 {
 	ASSERT_MESSAGE(!g_inputs,"Inputs already set!");
 	g_inputs = inputs;
 }
-void init_inputs(Input* in) 
+void init_inputs(Input* in,GLFWwindow* win) 
 {
 	in->keys = 0;
 	in->lastkeys = 0;
@@ -117,6 +140,8 @@ void init_inputs(Input* in)
 	in->mousebuttons[0] = false;
 	in->mousebuttons[1] = false;
 	set_input_context(in);
+	in->inited = false;
+	g_window = win;
 }
 void update_keys(Input* in)
 {

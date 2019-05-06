@@ -5,11 +5,26 @@
 #include <glad/include/glad/glad.h>
 #include <glad/src/glad.c>
 #include <GLFW/glfw3.h>
+#if 1
+#include <imgui/imgui.h>
+#include <imgui/imgui.cpp>
+#include <imgui/imgui_draw.cpp>
+#include <imgui/imgui_widgets.cpp>
+#include <imgui/imgui_demo.cpp>
+#define IMGUI_IMPL_OPENGL_LOADER_GLAD
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_glfw.cpp>
+#include <imgui/imgui_impl_opengl3.h>
+#include <imgui/imgui_impl_opengl3.cpp>
+#endif
+
 #include "math.h"
 #include "inputs.h"
 #include "renderer.h"
 #include "camera.h"
 #include "game.h"
+
+
 
 static void glfw_error_callback(int e, const char *d) {
 	printf("Error %d: %s\n", e, d);
@@ -40,11 +55,11 @@ int main(int argc,char* argv[])
 	(void)argc;(void)argv;
 	GLFWwindow* window = init_window();
 	Game game;
-	init_inputs(&game.inputs);
+	init_inputs(&game.inputs,window);
 	glfwSetWindowUserPointer(window,&game.inputs);
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); 
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); 
 	Camera camera = get_camera(
-			{0.f,0.f,-3.f},
+			{0.f,20.f,-6.f},
 			0,-90,
 			90.f,	
 			(float)SCREENWIDHT / (float)SCREENHEIGHT
@@ -56,14 +71,31 @@ int main(int argc,char* argv[])
 	double currentTime = glfwGetTime();
 	double accumulator = 0.0;
 
-	while (!glfwWindowShouldClose(window)) {
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	const char* glsl_version = "#version 130";
+	ImGui_ImplOpenGL3_Init(glsl_version);
+
+	// Setup style
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+	ImGui::EndFrame();
+	activate_cursor();
+	bool breakLoop = false;
+	while (!glfwWindowShouldClose(window) && !breakLoop) {
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
 		{
 			break;
 		}
 		glfwPollEvents();
 
-		if(key_pressed(Key::KEY_E)) { LOG("e pressed\n"); }
+		if (key_pressed(Key::KEY_E)) { LOG("e pressed\n"); }
 		else if (key_down(Key::KEY_E)) { LOG("e down"); }
 
 		int display_w,display_h;
@@ -77,17 +109,23 @@ int main(int argc,char* argv[])
 		accumulator += frameTime;
 		while(accumulator >= dt)
 		{
+			ImGui_ImplOpenGL3_NewFrame();
+			ImGui_ImplGlfw_NewFrame();
+			ImGui::NewFrame();
+
 			accumulator -= dt;
-			if(accumulator > dt) {
-				printf("PERF WARNING!\n");
-			}
 			render_start(&game.renderer);
 			update_camera(&camera);
-			update_components(&game);
+			if(!update_components(&game)) breakLoop = true;
 			update_keys(&game.inputs);
+
+			ImGui::EndFrame();
 		}
 		/*End of the test*/
 		render(&game.renderer,camera);
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		glfwSwapBuffers(window);
 	}
 	glfwTerminate();

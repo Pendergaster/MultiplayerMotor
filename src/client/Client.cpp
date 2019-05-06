@@ -46,29 +46,35 @@ void Client::OpenConnection()
 	Peer->Connect(m_ip.c_str(), (unsigned short)m_port, 0, 0);
 
 	Delta = chrono::system_clock::now();
-	TimeInterval = (int)((1.0 / 60) * 1000);
+	TimeInterval = (int)((1.0 / 30) * 1000);
 }
 
-void Client::Update()
+CustomMessages Client::Update()
 {
-	auto TimeDifference = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - Delta);
+	CustomMessages ret;
+	//auto TimeDifference = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - Delta);
 	/*Loads packet from peer*/
-	if ((float)TimeDifference.count() > TimeInterval)
-	{
-		Delta += chrono::milliseconds((int)TimeInterval);
+	//if ((float)TimeDifference.count() > TimeInterval)
+	//{
+		//Delta += chrono::milliseconds((int)TimeInterval);
 		SendPlayerState();
 		isNewData = false;
 		for (m_packet = Peer->Receive(); m_packet != 0; m_packet = Peer->Receive())
 		{
 			/*Switch case that lets us check what kind of packet it was*/
-			ClientConnectionUpdate(m_packet);
+			CustomMessages temp = ClientConnectionUpdate(m_packet);
+			if(temp == LOGIN_ACCEPTED) {
+				ret = temp;
+			}
 			Peer->DeallocatePacket(m_packet);
 		}
-	}
+	//}
+	return ret;
 }
 
-void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
+CustomMessages Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 {
+	CustomMessages ret;
 	switch (Packet->data[0])
 	{
 	case ID_CONNECTION_REQUEST_ACCEPTED:
@@ -94,6 +100,7 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 	case LOGIN_ACCEPTED:
 		CONSOLE("Server accepted our username: " << m_username);
 		LoggedIn = true;
+		ret = LOGIN_ACCEPTED;
 		break;
 	case LOGIN_FAILED:
 		CONSOLE("Server did not accept our username");
@@ -116,6 +123,7 @@ void Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 		ReadBulk(Packet);
 		break;
 	}
+	return ret;
 }
 
 void Client::SendPlayerState()

@@ -162,7 +162,7 @@ void Server::ServerStart()
 	CONSOLE("Starting server at port " << Port);
 
 	Delta120 = chrono::system_clock::now();
-	TimeInterval = (int)((1.0 / 120) * 1000);
+	TimeInterval = (int)((1.0 / 30) * 1000);
 
 	running = true;
 }
@@ -184,7 +184,7 @@ void Server::ServerUpdate()
 
 		//SendCubeInfo();
 		WriteBulk();
-		dynamicsWorld->stepSimulation(1.0 / 120.0);
+		dynamicsWorld->stepSimulation(1.0 / 30.0,8);
 
 		for (Packet = Peer->Receive(); Packet; Packet = Peer->Receive())
 		{

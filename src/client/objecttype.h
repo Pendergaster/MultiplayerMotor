@@ -12,8 +12,8 @@ enum class ObjectType : int {
 struct ObjectTracker {
 	ObjectType	type;
 	vec3		pos;
-	vec3		velocity;
-	vec3		angularVelocity;
+	vec3		velocity; //TODO(Mika) poista
+	vec3		angularVelocity; //TODO(Mika) poista
 	quaternion	orientation;
 };
 

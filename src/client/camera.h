@@ -32,7 +32,7 @@ static Camera get_camera(vec3 pos,float yaw,float pitch,float fov,float aspect) 
 }
 
 static void update_camera(Camera* cam) {
-
+	if(is_input_active()) return;
 	vec2 movement = get_mouse_movement();
 	float sensitivity = 0.1f;
 	scale(&movement,sensitivity);
