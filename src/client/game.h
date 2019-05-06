@@ -359,11 +359,12 @@ UPDATEFUNC(PlayerCamera) {
 	(void)comp;(void)game;
 }
 
-Entity* get_player_object(Game* game,int cubeId,const std::vector<PlayerData>& data);
+Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data,
+								vec3 pos,vec3 scale,quaternion orientation);
 Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 
-InterpolationData spawn_network_object(Game* game,const ObjectTracker& track) {
+InterpolationData spawn_network_object(Game* game,const ObjectTracker& track,int id) {
 	LOG("Spewning new object!");
 	InterpolationData ret;
 	ret.first.track = track;
@@ -384,6 +385,12 @@ InterpolationData spawn_network_object(Game* game,const ObjectTracker& track) {
 											 ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
 										 } break;
 		case ObjectType::Player: {
+									const std::vector<PlayerData>& pldata = game->connection.Players;
+									 Entity* temp = get_player_object(game,id,pldata,track.pos,
+											 player_scale,track.orientation);
+									 ret.ent = temp;
+									 ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
+									 ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
 
 								 } break;
 		default : ABORT_MESSAGE("unknown object spawning!");
@@ -400,14 +407,14 @@ UPDATEFUNC(NetWorkSync) {
 		for(size_t i = 0; i < serverobjs.size();i++) {
 			if(i >= dynamic_array_size(comp->objs)) {
 				// spawn if more objecs have came		
-				InterpolationData temp = spawn_network_object(game,serverobjs[i]);
+				InterpolationData temp = spawn_network_object(game,serverobjs[i],i);
 				//internal_push_dynamicArray((void**)&comp->objs,&temp,sizeof(*comp->objs));
 				dynamic_push_back(comp->objs,&temp);
 				//comp->objs.push_back(temp);
 			} else if(serverobjs[i].type != comp->objs[i].first.track.type) {
 				// (de)spawn if type is different
 				if(serverobjs[i].type != ObjectType::Inactive) {
-					InterpolationData temp = spawn_network_object(game,serverobjs[i]);
+					InterpolationData temp = spawn_network_object(game,serverobjs[i],i);
 					comp->objs[i] = temp;
 				} else {
 					dispose_entity(game,comp->objs[i].ent);
@@ -461,7 +468,7 @@ bool update_components(Game* game) {
 			}
 			ImGui::InputText("name", name, 12);
 			ImGui::InputText("address", buf1, 64);
-            ImGui::InputInt("port", &port, 1);
+			ImGui::InputInt("port", &port, 1);
 			if (ImGui::Button("Log in")) {
 				// 60000
 				game->connection.Init(buf1,abs(port), name);
@@ -529,11 +536,12 @@ void init_game(Game* game)
 }
 
 static Color colors[4] = {{255,100,100,255},
-						{100,255,100,255},
-						{100,100,255,255},
-						{100,100,100,255}};
+	{100,255,100,255},
+	{100,100,255,255},
+	{100,100,100,255}};
 
-Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data) 
+Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data,
+											vec3 pos,vec3 scale,quaternion orientation) 
 {
 	(void)colors;
 	(void)data;
@@ -555,7 +563,7 @@ Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& d
 		ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
 	}
 	RenderInit(rend,ent,{255,0,0,255});
-	TransformInit(tran,ent,{0,2,0},{1,1,1},{0,0,0,1});
+	TransformInit(tran,ent,pos,scale,orientation);
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
 }
@@ -568,12 +576,14 @@ Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation)
 	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
 	if(pos.x < 0 && pos.z == 0) 
 		RenderInit(rend,ent,colors[0]);
-	if(pos.x == 0 && pos.z < 0) 
+	else if(pos.x == 0 && pos.z < 0) 
 		RenderInit(rend,ent,colors[1]);
-	if(pos.x > 0 && pos.z == 0) 
+	else if(pos.x > 0 && pos.z == 0) 
 		RenderInit(rend,ent,colors[2]);
-	if(pos.x == 0 && pos.z > 0) 
+	else if(pos.x == 0 && pos.z > 0) 
 		RenderInit(rend,ent,colors[3]);
+	else RenderInit(rend,ent,{255,255,255,255});
+
 
 
 	TransformInit(tran,ent,pos,scale,orientation);
