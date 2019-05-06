@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <string.h>
 #include "objecttype.h"
 #include "renderer.h"
 #include "utils.h"
@@ -350,11 +351,12 @@ UPDATEFUNC(Render) {
 	render_cube(&game->renderer,comp->transform->pos,
 			comp->transform->scale,comp->transform->orientation,comp->color);
 }
-Entity* get_player_object(Game* game);
+Entity* get_player_object(Game* game,int cubeId,const std::vector<PlayerData>& data);
 Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 
 InterpolationData spawn_network_object(Game* game,const ObjectTracker& track) {
+	LOG("Spewning new object!");
 	InterpolationData ret;
 	ret.first.track = track;
 	ret.last.track = track;
@@ -426,7 +428,7 @@ UPDATEFUNC(NetWorkSync) {
 	}
 }
 
-
+static char name[64] = ""; 
 bool update_components(Game* game) {
 	//ImGui::ShowDemoWindow();
 	ImGui::Begin("Supa kame");
@@ -435,7 +437,6 @@ bool update_components(Game* game) {
 	if(!loggedIn) {
 		static bool	triedToLog = false;
 		static char buf1[12] = ""; 
-		static char name[64] = ""; 
 		static int port = 0;
 		if(!triedToLog) {
 			static bool fileLoaded = false;
@@ -460,6 +461,7 @@ bool update_components(Game* game) {
 				triedToLog = true;
 				FILE* f = fopen("connection.info","w");
 				if(f) fprintf(f,"%s %d %s",buf1,port,name);
+				fclose(f);
 			}
 		} else {
 			if (LOGIN_ACCEPTED == game->connection.Update()) {
@@ -475,38 +477,8 @@ bool update_components(Game* game) {
 	} else {
 		game->connection.Update();
 
-#if 0
-		do { ;
-			CONCAT(Physics,Component)** temp = (CONCAT(Physics,Component)**)(game->updateArrays[Physics].start); 
-			for(u32 i = 0; i < game->updateArrays[Physics].lastindex; i++) 
-			{ if(temp[i]->header.type != numeric_max_u32) { 
-															  CONCAT(Physics,Update)(temp[i],game); 
-														  } else { 
-															  return_to_pool(&game->componentPools[Physics],temp[i]); 
-															  delete_from_tight_array(&game->updateArrays[Physics],i); 
-															  i--; 
-														  } 
-
-			};
-		} while(0); 
-
-		do { ;
-			CONCAT(Render,Component)** temp = (CONCAT(Render,Component)**)(game->updateArrays[Render].start); 
-			for(u32 i = 0; i < game->updateArrays[Render].lastindex; i++) { 
-				if(temp[i]->header.type != numeric_max_u32){ CONCAT(Render,Update)(temp[i],game); 
-				} else { 
-					return_to_pool(&game->componentPools[Render],temp[i]); 
-					delete_from_tight_array(&game->updateArrays[Render],i); 
-					i--; 
-				} 
-			};
-		} while(0);
-
-#else
 
 		COMPONENT_TYPES(UPDATE_COMPONENT)
-#endif
-
 	}
 	return 1;
 }
@@ -548,25 +520,54 @@ void init_game(Game* game)
 
 }
 
-Entity* get_player_object(Game* game) 
+static Color colors[4] = {{255,100,100,255},
+						{100,255,100,255},
+						{100,100,255,255},
+						{100,100,100,255}};
+
+Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data) 
 {
+	(void)colors;
+	(void)data;
 	RenderComponent* rend = (RenderComponent*)get_component(game,Render);
 	TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
-	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
-	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+	bool playerFound = false;
+	for(const PlayerData& player : data) {
+		if(player.kuutioId == cubeID && !strcmp(player.name,name)) {
+			playerFound = true;
+		}
+	}
+	Entity* ent = NULL;
+	if(playerFound) {
+		ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
+		ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+	} else {
+		ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
+		ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+	}
 	RenderInit(rend,ent,{255,0,0,255});
 	TransformInit(tran,ent,{0,2,0},{1,1,1},{0,0,0,1});
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 	return ent;
 }
+
 Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation) 
 {
 	RenderComponent* rend = (RenderComponent*)get_component(game,Render);
 	TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
 	ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
 	Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
-	RenderInit(rend,ent,{255,255,255,255});
-	TransformInit(tran,ent,pos,scale,{0,0,0,1});
+	if(pos.x < 0 && pos.z == 0) 
+		RenderInit(rend,ent,colors[0]);
+	if(pos.x == 0 && pos.z < 0) 
+		RenderInit(rend,ent,colors[1]);
+	if(pos.x > 0 && pos.z == 0) 
+		RenderInit(rend,ent,colors[2]);
+	if(pos.x == 0 && pos.z > 0) 
+		RenderInit(rend,ent,colors[3]);
+
+
+	TransformInit(tran,ent,pos,scale,orientation);
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 
 	return ent;
