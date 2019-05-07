@@ -365,9 +365,57 @@ UPDATEFUNC(Render) {
 
 UPDATEFUNC(PlayerCamera) {
 	(void)comp;(void)game;
-	vec3 targetPosition;
-	vec3 rot = quat_to_euler(comp->playerTrans->orientation);
-	ImGui::Text("player rotaton: %f %f %f",rot.x,rot.y,rot.z);
+	//vec3 targetPosition;
+	//vec3 rot = quat_to_euler(comp->playerTrans->orientation);
+	//ImGui::Text("player rotaton: %f %f %f", rad_to_deg * rot.x,rad_to_deg * rot.y,rad_to_deg * rot.z);
+	vec3 target(0,0,1.0);
+	target = rotate_vector_by_quaternion(target, comp->playerTrans->orientation);
+	//ImGui::Text("target pos: %f %f %f", target.x,target.y,target.z);
+	scale(&target,5.f);
+	vec3 direction = (comp->playerTrans->pos + target) - game->camera.position;
+	normalize(&direction);
+#if 1
+	vec3 up;
+	up = cross_product(direction, {0,1,0});
+	normalize(&up);
+	up = cross_product(up,direction);
+	normalize(&up);
+
+	vec3 posTarget = target;
+	normalize(&posTarget);
+	scale(&posTarget,-7.0f);
+	float height = 5.f;
+	vec3 camPos = comp->playerTrans->pos + posTarget;
+	camPos.y += height;
+
+	vec3 dist = camPos - game->camera.position;
+	float speed = 0.15;
+
+	//ImGui::Text("dist: %f %f %f", dist.x,dist.y,dist.z);
+	//ImGui::Text("cam target: %f %f %f", camPos.x,camPos.y,camPos.z);
+	float l = lenght(dist);
+	//float maxLen = 4.f;
+	if(l < speed) {
+		game->camera.position = camPos;
+	} else { // if(l < maxLen){
+		normalize(&dist);
+		scale(&dist,speed);
+		//ImGui::Text("adding: %f %f %f", dist.x,dist.y,dist.z);
+		game->camera.position = game->camera.position + dist;
+	}
+#if 0
+   	else {
+		normalize(&dist);
+		scale(&dist,-maxLen);
+		game->camera.position = camPos + dist;
+	}
+#endif
+	create_lookat_mat4(&game->camera.view,game->camera.position,
+			comp->playerTrans->pos + target ,up);
+
+	render_cube(&game->renderer,comp->playerTrans->pos + target,
+			{0.2,0.2,0.2},{0,0,0,1},{0,0,255,255});
+#endif
 }
 
 Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data,
@@ -397,7 +445,7 @@ InterpolationData spawn_network_object(Game* game,const ObjectTracker& track,int
 										 } break;
 		case ObjectType::Player: {
 									 const std::vector<PlayerData>& pldata = game->connection.Players;
-									 Entity* temp = get_player_object(game,id,pldata,track.pos,
+									 Entity* temp = get_player_object(game,id+1,pldata,track.pos,
 											 player_scale,track.orientation);
 									 ret.ent = temp;
 									 ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
@@ -428,6 +476,7 @@ UPDATEFUNC(NetWorkSync) {
 					InterpolationData temp = spawn_network_object(game,serverobjs[i],i);
 					comp->objs[i] = temp;
 				} else {
+					LOG("DISPOSING!");
 					dispose_entity(game,comp->objs[i].ent);
 					comp->objs[i].first.track.type =  ObjectType::Inactive;
 					comp->objs[i].last.track.type =  ObjectType::Inactive;
@@ -441,16 +490,22 @@ UPDATEFUNC(NetWorkSync) {
 		}
 	} 
 	size_t size = dynamic_array_size(comp->objs);
+	double timeWindow = comp->targetTime - comp->lastTime;
+	double current = comp->currentTime - comp->targetTime;
+	double delta = current / timeWindow;
+	
 	for(InterpolationData* data = comp->objs; data != comp->objs + size; data++) { 
 		if(data->first.track.type == ObjectType::Inactive) continue;
 		vec3 target = data->last.track.pos - data->first.track.pos;
 		target = data->first.track.pos + target;
-		double timeWindow = comp->targetTime - comp->lastTime;
-		double current = comp->currentTime - comp->targetTime;
-		double delta = current / timeWindow;
 		data->trans->pos = vec_lerp(data->first.track.pos,data->last.track.pos,delta);
 		data->trans->orientation = interpolate_q(data->first.track.orientation,
 				data->last.track.orientation,delta);
+
+		normalize(&data->trans->orientation);
+	}
+	for(const PlayerData& data : game->connection.Players) {
+		ImGui::Text("Player: %s -- Score %d",data.name,data.score);
 	}
 }
 
@@ -503,9 +558,20 @@ bool update_components(Game* game) {
 	} else {
 		game->connection.Update();
 
-
 		COMPONENT_TYPES(UPDATE_COMPONENT)
 	}
+
+	quaternion q1({0,1,0},deg_to_rad * 1.f);
+	vec3 temp(0,1,0.5);
+	normalize(&temp);
+	quaternion q2(temp,deg_to_rad * 10.f);
+	static float time = 0;
+	time += 1.0 /  60.0;
+	quaternion qnew  =interpolate_q(q1,q2,time * 10);
+
+	render_cube(&game->renderer,{0,10,0},
+			{1,1,1},qnew,{0,0,255,255});
+
 	return 1;
 }
 
@@ -544,7 +610,7 @@ void init_game(Game* game)
 	Entity* net = get_networksynch_object(game);
 	//(void)player;(void)floor;(void)net;
 	game->camera = get_camera(
-			{0.f,20.f,-6.f},
+			{0.f,20.f,-15.f},
 			0,-90,
 			90.f,	
 			(float)SCREENWIDHT / (float)SCREENHEIGHT
@@ -576,6 +642,7 @@ Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& d
 		PlayerCameraComponent* cam = (PlayerCameraComponent*)get_component(game,PlayerCamera);
 		ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran,(ComponentHeader*)cam};
 		ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+		PlayerCameraInit(cam,ent,tran);
 	} else {
 		ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
 		ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));

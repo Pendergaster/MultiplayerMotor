@@ -149,5 +149,30 @@ static vec2 get_mouse_movement()
 	return g_inputs->mpos - g_inputs->lastmpos;
 }
 
+bool key_pressed(Key key,const Input& in)
+{
+	return	BIT_CHECK(in.keys, (u32)key) && !(BIT_CHECK(in.lastkeys, (u32)key));	
+}
+bool key_down(Key key,const Input& in)
+{
+	return BIT_CHECK(in.keys,(u32)key);
+}
+
+static vec2 get_mouse_position(const Input& in)
+{
+	return in.mpos;
+}
+
+static vec2 get_last_mouse_position(const Input& in)
+{
+	return in.lastmpos;
+}
+
+static vec2 get_mouse_movement(const Input& in)
+{
+	return in.mpos - in.lastmpos;
+}
+
+
 
 #endif

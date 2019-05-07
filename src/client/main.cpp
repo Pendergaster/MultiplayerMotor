@@ -109,7 +109,7 @@ int main(int argc,char* argv[])
 
 			accumulator -= dt;
 			render_start(&game.renderer);
-			update_camera(&game.camera);
+			//update_camera(&game.camera);
 			if(!update_components(&game)) breakLoop = true;
 			update_keys(&game.inputs);
 

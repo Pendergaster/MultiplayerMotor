@@ -241,6 +241,25 @@ vec3 quat_to_euler(const quaternion& q)
 	return ret;
 }
 
+float inline dot_product(const vec3& lhv, const vec3& rhv) 
+{
+	return lhv.x * rhv.x + lhv.y * rhv.y + lhv.z * rhv.z;
+}
+
+static inline vec3 cross_product(const vec3& lhv, const vec3& rhv);
+vec3 rotate_vector_by_quaternion(const vec3& v, const quaternion& q)
+{
+	// Extract the vector part of the quaternion
+	vec3 u(q.i, q.j, q.k);
+
+	// Extract the scalar part of the quaternion
+	float s = q.scalar;
+
+	// Do the math
+	return  2.0f * dot_product(u, v) * u
+		+ (s*s - dot_product(u, u)) * v
+		+ 2.0f * s * cross_product(u, v);
+}
 quaternion interpolate_q(quaternion start,quaternion end,float delta)
 {
 	//calc cosine and theata
