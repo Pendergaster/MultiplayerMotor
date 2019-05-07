@@ -58,7 +58,6 @@ public:
 	void WriteBulk();
 	void AddPlayerCube(std::string name);
 	void RemovePlayerCube(std::string name);
-	void ReadPlayerLookDir(RakNet::Packet* packet);
 	void UpdatePlayerCube(std::string guid,inputType input, vec3 lookDir);
 	void ReadPlayerInput(RakNet::Packet* packet);
 	void ReadPlayerCoord(RakNet::Packet* packet);
@@ -96,7 +95,8 @@ private:
 	std::vector<Cube> smallCubesInactive;
 	std::vector<Cube> Floors;
 	std::vector<Cube> Players;
-	std::vector<int> Score;
+	std::vector<PlayerData> PlayerSlot;
+	int playerAmount;
 
 	std::vector<btRigidBody*> cubes;
 	btRigidBody* floor;

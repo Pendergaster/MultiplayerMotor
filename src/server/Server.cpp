@@ -13,7 +13,8 @@ Server::Server(string IP, int Port)
 	this->Port = Port;
 	Connections = new UserDatabase();
 	ServerStart();
-
+	PlayerSlot = vector<PlayerData>(4);
+	playerAmount = 0;
 	InitBulletWorld();
 }
 
@@ -28,6 +29,10 @@ void Server::InitBulletWorld()
 	dynamicsWorld->setGravity(btVector3(physics_gravity.x,physics_gravity.y,physics_gravity.z));
 
 	AddCube(ObjectType::Floor, { 0.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { -20.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 0.0f,0.0f,-20.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 20.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 0.0f,0.0f,20.0f }, { 0.0f,0.0f,0.0f });
 
 	for (int x = 0; x < 3; x++) //tehdään cubet mappiin
 	{
@@ -36,15 +41,6 @@ void Server::InitBulletWorld()
 			for (int z = 0; z < 3; z++) //tehdään cubet mappiin
 			{
 				AddCube(ObjectType::FreeSimulation, { (float)x ,(float)y + 50.0f,(float)z }, { 0.0f,0.0f,0.0f });
-				//t.setOrigin({ (float)x,(float)z,(float)y });
-				//btBoxShape* box = new btBoxShape({ 0.5,0.5,0.5 });
-				//box->calculateLocalInertia(1.0f, defaultIntertia);
-				//btMotionState* boxmotion = new btDefaultMotionState(t);
-				//btRigidBody::btRigidBodyConstructionInfo boxInfo(0.2f, boxmotion, box, defaultIntertia);
-				//btRigidBody* newBox = new btRigidBody(boxInfo);
-				//newBox->setFriction(0.1f);
-				//cubes.push_back(newBox);
-				//dynamicsWorld->addRigidBody(newBox);
 			}
 		}
 	}
@@ -81,10 +77,9 @@ void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 		btMotionState* boxmotion = new btDefaultMotionState(t);
 		btRigidBody::btRigidBodyConstructionInfo boxInfo(free_mass, boxmotion, box, defaultIntertia);
 		btRigidBody* newBox = new btRigidBody(boxInfo);
-
+		newBox->setAngularFactor({ 0,1,0 });
 		dynamicsWorld->addRigidBody(newBox);
 		Players.push_back(Cube(Players.size()+Floors.size()+smallCubesActive.size() + 1, type, newBox));
-		Score.push_back(0);
 	}
 	if (type == ObjectType::Floor)
 	{
@@ -138,32 +133,29 @@ void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 
 void Server::AddPlayerCube(std::string name)
 {
-	btVector3 defaultIntertia(0, 0, 0);
-
-	btBoxShape* box = new btBoxShape({ 2,2,2 });
-	box->calculateLocalInertia(1.0f, defaultIntertia);
-
-	btTransform t;
-	t.setIdentity();
-	t.setOrigin({0,5,0});
-
-	btMotionState* boxmotion = new btDefaultMotionState(t);
-	btRigidBody::btRigidBodyConstructionInfo boxInfo(20.0f, boxmotion, box, defaultIntertia);
-	btRigidBody* newBox = new btRigidBody(boxInfo);
-	newBox->setFriction(0.1f);
-	//players.push_back(newBox);
-	slots.push_back(name);
-	dynamicsWorld->addRigidBody(newBox);
+	AddCube(ObjectType::Player, { 3,3,0 }, { 0,0,0 }); //We create cube for player
+	for(int i = 0; i < 4; i++)
+	{
+		if(PlayerSlot[i].name[0] == '\0')
+		{
+			strcpy(PlayerSlot[i].name, name.c_str());
+			PlayerSlot[i].playerId = i;
+			PlayerSlot[i].kuutioId = Players.back().id;
+			PlayerSlot[i].score = 0;
+			playerAmount++;
+			break;
+		}
+	}
 }
 
 void Server::RemovePlayerCube(std::string name)
 {
-	for (int i = 0; i < Players.size(); i++)
+	for (int i = 0; i < 4; i++)
 	{
-		if (slots[i] == name)
+		if(strcmp(PlayerSlot[i].name,name.c_str()))
 		{
-			slots.erase(slots.begin() + i);
-			Players.erase(Players.begin() + i);
+			PlayerSlot[i].name[0] = '\0';
+			playerAmount--;
 		}
 	}
 }
@@ -223,8 +215,8 @@ void Server::CheckPacket(const RakNet::Packet& P)
 	case USERNAME_FOR_GUID:
 		Result = Connections->RegisterGuid(Packet);
 		SendResponse(Packet->systemAddress, LOGIN_ACCEPTED);
-		AddCube(ObjectType::Player, { 3,3,0 }, { 0,0,0 }); //We create cube for player
 		slots.push_back(Packet->guid.ToString()); //we save its guid.
+		AddPlayerCube(Result);
 		CONSOLE(Packet->guid.ToString() << " gave an username " << Result);
 		break;
 	case ID_CONNECTION_LOST:
@@ -240,9 +232,6 @@ void Server::CheckPacket(const RakNet::Packet& P)
 		break;
 	case PLAYER_STATE:
 		ReadPlayerState(Packet);
-		break;
-	case PLAYER_LOOK_DIR:
-		ReadPlayerLookDir(Packet);
 		break;
 	}
 }
@@ -445,8 +434,6 @@ void Server::WriteBulk()
 			Floors[i].rb->getMotionState()->getWorldTransform(trans);
 			bs.Write(trans.getOrigin());
 			bs.Write(trans.getRotation());
-			//bs.Write(Floors[i].rb->getLinearVelocity());
-			//bs.Write(Floors[i].rb->getAngularVelocity());
 		}
 		for (int i = 0; i < smallCubesActive.size(); i++)
 		{
@@ -456,8 +443,6 @@ void Server::WriteBulk()
 			smallCubesActive[i].rb->getMotionState()->getWorldTransform(trans);
 			bs.Write(trans.getOrigin());
 			bs.Write(trans.getRotation());
-			//bs.Write(smallCubesActive[i].rb->getLinearVelocity());
-			//bs.Write(smallCubesActive[i].rb->getAngularVelocity());
 		}
 		for (int i = 0; i < Players.size(); i++)
 		{
@@ -478,40 +463,28 @@ void Server::SendPlayerInfo()
 	RakNet::BitStream bs;
 
 	bs.Write((MessageID)PLAYER_INFO);
-	int size = Players.size();
-	bs.Write(size); //how many players we got
-	string name;
-	int score = 0;
-	int id = 0;
 
-	for (int i = 0; i < Players.size(); i++)
+	//int size = 0;
+	//for (int i = 0; i < 4; i++)
+	//{
+	//	if (PlayerSlot[i].name[0] != '\0')
+	//	{
+	//		size++;
+	//	}
+	//}
+
+	bs.Write(playerAmount);
+
+	for (int i = 0; i < 4; i++)
 	{
-		name = Connections->FindUsername(slots[i]);
-		char name2[12];
-		strcpy(name2, name.c_str());
-		id = Players[i].id;
-		bs.Write(name2,12);
-		bs.Write((score+1));
-		bs.Write(id);
-		bs.Write((i+1)); //TODO_MIKA: tee pelaaja slotit toimiviksi;
+		if (PlayerSlot[i].name[0] != '\0')
+		{
+			bs.Write(PlayerSlot[i]);
+		}
 	}
-	if (size != 0)
+	if (playerAmount != 0)
 	{
 		Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
-	}
-}
-
-void Server::ReadPlayerLookDir(RakNet::Packet* packet)
-{
-	RakNet::BitStream bs(packet->data, packet->length, false);
-	bs.IgnoreBytes(sizeof(RakNet::MessageID));
-
-	for (int i = 0; i < slots.size(); i++)
-	{
-		if(slots[i] == packet->guid.ToString())
-		{
-
-		}
 	}
 }
 
@@ -533,13 +506,5 @@ void Server::SendSmallCubeInfo()
 		bs.Write(trans.getRotation());
 	}
 
-	//for (int i = 0; i < cubes.size(); i++)
-	//{
-	//	cubes[i]->getMotionState()->getWorldTransform(trans);
-	//	bs.Write(trans.getOrigin());
-	//	bs.Write(trans.getRotation());
-	//}
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
-
-
 }

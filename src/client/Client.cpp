@@ -234,13 +234,14 @@ void Client::ReadPlayerInfo(RakNet::Packet* packet)
 	int id;
 	int playerID;
 	char name[12];
-	//Players.clear();
+	Players.clear();
 	for (int i = 0; i < size; i++)
 	{
-		bs.Read(newData.name,12);
-		bs.Read(newData.score);
-		bs.Read(newData.kuutioId);
-		bs.Read(newData.playerId);
+		bs.Read(newData);
+		//bs.Read(newData.name,12);
+		//bs.Read(newData.score);
+		//bs.Read(newData.kuutioId);
+		//bs.Read(newData.playerId);
 		//bs.Read(newData, (unsigned int)sizeof(PlayerData));
 		//strcpy(newData.name, name.c_str());
 
