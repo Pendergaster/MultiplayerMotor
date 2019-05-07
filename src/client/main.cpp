@@ -58,12 +58,6 @@ int main(int argc,char* argv[])
 	init_inputs(&game.inputs,window);
 	glfwSetWindowUserPointer(window,&game.inputs);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); 
-	Camera camera = get_camera(
-			{0.f,20.f,-6.f},
-			0,-90,
-			90.f,	
-			(float)SCREENWIDHT / (float)SCREENHEIGHT
-			);
 	init_game(&game);
 	game.renderer = init_renderer();
 
@@ -115,14 +109,14 @@ int main(int argc,char* argv[])
 
 			accumulator -= dt;
 			render_start(&game.renderer);
-			update_camera(&camera);
+			update_camera(&game.camera);
 			if(!update_components(&game)) breakLoop = true;
 			update_keys(&game.inputs);
 
 			ImGui::EndFrame();
 		}
 		/*End of the test*/
-		render(&game.renderer,camera);
+		render(&game.renderer,game.camera);
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

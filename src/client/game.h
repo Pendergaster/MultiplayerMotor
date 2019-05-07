@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "math.h"
 #include "inputs.h"
+#include "camera.h"
 #include <GLFW/glfw3.h>
 #define MIKA 1
 #if MIKA
@@ -214,6 +215,7 @@ DECLARECOMPONENT(Transform,
 		);
 
 DECLARECOMPONENT(PlayerCamera,
+		TransformComponent* playerTrans;
 		);
 
 
@@ -278,6 +280,7 @@ struct Game {
 	Input						inputs;
 	// mikan connectio luokka
 	Client						connection;
+	Camera						camera;
 };
 
 Entity* get_new_entity(Game* game,funcptr dispose,ComponentHeader** components,const u32 numComponents) 
@@ -350,6 +353,11 @@ COMPONENTINIT(NetWorkSync) {
 	comp->currentTime = glfwGetTime();
 }
 
+COMPONENTINIT(PlayerCamera,TransformComponent* playerTrans) {
+	(void)ent;
+	comp->playerTrans = playerTrans;
+}
+
 UPDATEFUNC(Render) {
 	render_cube(&game->renderer,comp->transform->pos,
 			comp->transform->scale,comp->transform->orientation,comp->color);
@@ -357,10 +365,13 @@ UPDATEFUNC(Render) {
 
 UPDATEFUNC(PlayerCamera) {
 	(void)comp;(void)game;
+	vec3 targetPosition;
+	vec3 rot = quat_to_euler(comp->playerTrans->orientation);
+	ImGui::Text("player rotaton: %f %f %f",rot.x,rot.y,rot.z);
 }
 
 Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data,
-								vec3 pos,vec3 scale,quaternion orientation);
+		vec3 pos,vec3 scale,quaternion orientation);
 Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 
@@ -385,7 +396,7 @@ InterpolationData spawn_network_object(Game* game,const ObjectTracker& track,int
 											 ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
 										 } break;
 		case ObjectType::Player: {
-									const std::vector<PlayerData>& pldata = game->connection.Players;
+									 const std::vector<PlayerData>& pldata = game->connection.Players;
 									 Entity* temp = get_player_object(game,id,pldata,track.pos,
 											 player_scale,track.orientation);
 									 ret.ent = temp;
@@ -532,16 +543,23 @@ void init_game(Game* game)
 	//Entity* floor = get_floor_object(game,{0,0,0},{5,1,5});
 	Entity* net = get_networksynch_object(game);
 	//(void)player;(void)floor;(void)net;
+	game->camera = get_camera(
+			{0.f,20.f,-6.f},
+			0,-90,
+			90.f,	
+			(float)SCREENWIDHT / (float)SCREENHEIGHT
+			);
 
 }
 
-static Color colors[4] = {{255,100,100,255},
+static Color colors[4] = {
+	{255,100,100,255},
 	{100,255,100,255},
 	{100,100,255,255},
 	{100,100,100,255}};
 
 Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data,
-											vec3 pos,vec3 scale,quaternion orientation) 
+		vec3 pos,vec3 scale,quaternion orientation) 
 {
 	(void)colors;
 	(void)data;
@@ -583,8 +601,6 @@ Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation)
 	else if(pos.x == 0 && pos.z > 0) 
 		RenderInit(rend,ent,colors[3]);
 	else RenderInit(rend,ent,{255,255,255,255});
-
-
 
 	TransformInit(tran,ent,pos,scale,orientation);
 	// COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {

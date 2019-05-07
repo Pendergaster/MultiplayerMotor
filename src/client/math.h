@@ -9,16 +9,16 @@
   static inline void cross_product(vec3* result, const vec3* lhv, const vec3*rhv);
   static inline vec3 cross_product(const vec3* lhv, const vec3*rhv);
   void perspective(mat4* m,float y_fov,float aspect,float n,float f);
-  static constexpr float Pi = 3.141592653f;
-  static constexpr float deg_to_rad = Pi / 180.f; 
-  static constexpr float red_to_deg = 180.f / Pi;
+  static constexpr float MATH_PI = 3.141592653f;
+  static constexpr float deg_to_rad = MATH_PI / 180.f; 
+  static constexpr float red_to_deg = 180.f / MATH_PI;
   static inline void create_translation_matrix(mat4* result, const vec3 v);
   static inline void create_lookat_mat4(mat4* Result, const vec3* eye, const vec3* target, const vec3* up);
   }*/
 
-static constexpr float Pi = 3.141592653f;
-static constexpr float deg_to_rad = Pi / 180.f; 
-static constexpr float rad_to_deg = 180.f / Pi;
+static constexpr float MATH_PI = 3.141592653f;
+static constexpr float deg_to_rad = MATH_PI / 180.f; 
+static constexpr float rad_to_deg = 180.f / MATH_PI;
 
 struct  vec2
 {
@@ -154,11 +154,11 @@ struct quaternion
 	{
 		normalize(&v);
 #if 0
-		btScalar d = axis.length();
-		btAssert(d != btScalar(0.0));
-		btScalar s = btSin(_angle * btScalar(0.5)) / d;
+		float d = axis.length();
+		btAssert(d != float(0.0));
+		float s = btSin(_angle * float(0.5)) / d;
 		setValue(axis.x() * s, axis.y() * s, axis.z() * s,
-				btCos(_angle * btScalar(0.5)));
+				btCos(_angle * float(0.5)));
 #endif
 		scalar = cosf(theata / 2.f);
 		float s = sinf(theata / 2.f);
@@ -193,6 +193,54 @@ struct quaternion
 #endif
 	}
 };
+inline float limited_sin(float x)
+{
+	if (x < float(-1))
+		x = float(-1);
+	if (x > float(1))
+		x = float(1);
+	return asinf(x);
+}
+
+vec3 quat_to_euler(const quaternion& q) 
+{
+	vec3 ret;
+	float squ;
+	float sqx;
+	float sqy;
+	float sqz;
+	float sarg;
+	sqx = q.i * q.i;
+	sqy = q.j * q.j;
+	sqz = q.k * q.k;
+	squ = q.scalar	 * q.scalar;
+	sarg = float(-2.) * (q.i * q.k - q.scalar * q.j);
+
+	// If the pitch angle is PI/2 or -PI/2, we can only compute
+	// the sum roll + yaw.  However, any combination that gives
+	// the right sum will produce the correct orientation, so we
+	// set rollX = 0 and compute yawZ.
+	if (sarg <= -float(0.99999))
+	{
+		ret.y = float(-0.5) * MATH_PI;
+		ret.x = 0;
+		ret.z = float(2) * atan2f(q.i, -q.j);
+	}
+	else if (sarg >= float(0.99999))
+	{
+		ret.y = float(0.5) * MATH_PI;
+		ret.x = 0;
+		ret.z = float(2) * atan2f(-q.i, q.j);
+	}
+	else
+	{
+		ret.y = limited_sin(sarg);
+		ret.x = atan2f(2 * (q.j	 * q.k + q.scalar * q.i), squ - sqx - sqy + sqz);
+		ret.z = atan2f(2 * (q.i * q.j + q.scalar * q.k), squ + sqx - sqy - sqz);
+	}
+	return ret;
+}
+
 quaternion interpolate_q(quaternion start,quaternion end,float delta)
 {
 	//calc cosine and theata
