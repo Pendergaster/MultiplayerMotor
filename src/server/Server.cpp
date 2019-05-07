@@ -28,6 +28,10 @@ void Server::InitBulletWorld()
 	dynamicsWorld->setGravity(btVector3(physics_gravity.x,physics_gravity.y,physics_gravity.z));
 
 	AddCube(ObjectType::Floor, { 0.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { -20.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 0.0f,0.0f,-20.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 20.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 0.0f,0.0f,20.0f }, { 0.0f,0.0f,0.0f });
 
 	for (int x = 0; x < 3; x++) //tehdään cubet mappiin
 	{
@@ -36,15 +40,6 @@ void Server::InitBulletWorld()
 			for (int z = 0; z < 3; z++) //tehdään cubet mappiin
 			{
 				AddCube(ObjectType::FreeSimulation, { (float)x ,(float)y + 50.0f,(float)z }, { 0.0f,0.0f,0.0f });
-				//t.setOrigin({ (float)x,(float)z,(float)y });
-				//btBoxShape* box = new btBoxShape({ 0.5,0.5,0.5 });
-				//box->calculateLocalInertia(1.0f, defaultIntertia);
-				//btMotionState* boxmotion = new btDefaultMotionState(t);
-				//btRigidBody::btRigidBodyConstructionInfo boxInfo(0.2f, boxmotion, box, defaultIntertia);
-				//btRigidBody* newBox = new btRigidBody(boxInfo);
-				//newBox->setFriction(0.1f);
-				//cubes.push_back(newBox);
-				//dynamicsWorld->addRigidBody(newBox);
 			}
 		}
 	}
