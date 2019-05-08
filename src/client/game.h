@@ -556,6 +556,8 @@ bool update_components(Game* game) {
 		}
 
 	} else {
+		game->connection.input = game->inputs;
+		//game->connection.yaw = game->inputs.lastmpos.x - game->inputs.mpos.x ;
 		game->connection.Update();
 
 		COMPONENT_TYPES(UPDATE_COMPONENT)

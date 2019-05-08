@@ -9,16 +9,16 @@
   static inline void cross_product(vec3* result, const vec3* lhv, const vec3*rhv);
   static inline vec3 cross_product(const vec3* lhv, const vec3*rhv);
   void perspective(mat4* m,float y_fov,float aspect,float n,float f);
-  static constexpr float Pi = 3.141592653f;
-  static constexpr float deg_to_rad = Pi / 180.f; 
-  static constexpr float red_to_deg = 180.f / Pi;
+  static constexpr float MATH_PI = 3.141592653f;
+  static constexpr float deg_to_rad = MATH_PI / 180.f; 
+  static constexpr float red_to_deg = 180.f / MATH_PI;
   static inline void create_translation_matrix(mat4* result, const vec3 v);
   static inline void create_lookat_mat4(mat4* Result, const vec3* eye, const vec3* target, const vec3* up);
   }*/
 
-static constexpr float Pi = 3.141592653f;
-static constexpr float deg_to_rad = Pi / 180.f; 
-static constexpr float rad_to_deg = 180.f / Pi;
+static constexpr float MATH_PI = 3.141592653f;
+static constexpr float deg_to_rad = MATH_PI / 180.f; 
+static constexpr float rad_to_deg = 180.f / MATH_PI;
 
 struct  vec2
 {
@@ -49,6 +49,7 @@ struct  vec3
 {
 	vec3() : x(0),y(0),z(0) {}
 	vec3(float _x,float _y,float _z) : x(_x),y(_y),z(_z) {}
+	vec3(float* unknown) : x(unknown[0]),y(unknown[1]),z(unknown[2]) {}
 	vec3(float val) : x(val),y(val),z(val) {}
 	union
 	{
@@ -103,7 +104,7 @@ struct  vec4
 	vec4() : x(0),y(0),z(0) {}
 	vec4(float _x,float _y,float _z,float _w) : x(_x),y(_y),z(_z),w(_w) {}
 	vec4(const vec3& v,float _w) : x(v.x),y(v.y),z(v.z),w(_w) {}
-
+	vec4(float* unknown) : x(unknown[0]),y(unknown[1]),z(unknown[2]),w(unknown[3]) {}
 	union
 	{
 		struct
@@ -130,6 +131,7 @@ struct quaternion
 {
 	float scalar,i,j,k;
 	quaternion(float _scalar,float _i,float _j,float _k): scalar(_scalar),i(_i),j(_j),k(_k) {};
+	quaternion(float* unknown) : scalar(unknown[0]),i(unknown[1]),j(unknown[2]),k(unknown[3]) {}
 	//https://ipfs.io/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Conversion_between_quaternions_and_Euler_angles.html
 	// Given a rotation vector of form unitRotationAxis * angle,
 	// returns the equivalent quaternion (unitRotationAxis * sin(angle), cos(Angle)).
@@ -152,11 +154,11 @@ struct quaternion
 	{
 		normalize(&v);
 #if 0
-		btScalar d = axis.length();
-		btAssert(d != btScalar(0.0));
-		btScalar s = btSin(_angle * btScalar(0.5)) / d;
+		float d = axis.length();
+		btAssert(d != float(0.0));
+		float s = btSin(_angle * float(0.5)) / d;
 		setValue(axis.x() * s, axis.y() * s, axis.z() * s,
-				btCos(_angle * btScalar(0.5)));
+				btCos(_angle * float(0.5)));
 #endif
 		scalar = cosf(theata / 2.f);
 		float s = sinf(theata / 2.f);
@@ -191,6 +193,73 @@ struct quaternion
 #endif
 	}
 };
+inline float limited_sin(float x)
+{
+	if (x < float(-1))
+		x = float(-1);
+	if (x > float(1))
+		x = float(1);
+	return asinf(x);
+}
+
+vec3 quat_to_euler(const quaternion& q) 
+{
+	vec3 ret;
+	float squ;
+	float sqx;
+	float sqy;
+	float sqz;
+	float sarg;
+	sqx = q.i * q.i;
+	sqy = q.j * q.j;
+	sqz = q.k * q.k;
+	squ = q.scalar	 * q.scalar;
+	sarg = float(-2.) * (q.i * q.k - q.scalar * q.j);
+
+	// If the pitch angle is PI/2 or -PI/2, we can only compute
+	// the sum roll + yaw.  However, any combination that gives
+	// the right sum will produce the correct orientation, so we
+	// set rollX = 0 and compute yawZ.
+	if (sarg <= -float(0.99999))
+	{
+		ret.y = float(-0.5) * MATH_PI;
+		ret.x = 0;
+		ret.z = float(2) * atan2f(q.i, -q.j);
+	}
+	else if (sarg >= float(0.99999))
+	{
+		ret.y = float(0.5) * MATH_PI;
+		ret.x = 0;
+		ret.z = float(2) * atan2f(-q.i, q.j);
+	}
+	else
+	{
+		ret.y = limited_sin(sarg);
+		ret.x = atan2f(2 * (q.j	 * q.k + q.scalar * q.i), squ - sqx - sqy + sqz);
+		ret.z = atan2f(2 * (q.i * q.j + q.scalar * q.k), squ + sqx - sqy - sqz);
+	}
+	return ret;
+}
+
+float inline dot_product(const vec3& lhv, const vec3& rhv) 
+{
+	return lhv.x * rhv.x + lhv.y * rhv.y + lhv.z * rhv.z;
+}
+
+static inline vec3 cross_product(const vec3& lhv, const vec3& rhv);
+vec3 rotate_vector_by_quaternion(const vec3& v, const quaternion& q)
+{
+	// Extract the vector part of the quaternion
+	vec3 u(q.i, q.j, q.k);
+
+	// Extract the scalar part of the quaternion
+	float s = q.scalar;
+
+	// Do the math
+	return  2.0f * dot_product(u, v) * u
+		+ (s*s - dot_product(u, u)) * v
+		+ 2.0f * s * cross_product(u, v);
+}
 quaternion interpolate_q(quaternion start,quaternion end,float delta)
 {
 	//calc cosine and theata
@@ -226,6 +295,19 @@ quaternion interpolate_q(quaternion start,quaternion end,float delta)
 		 sclp * start.j + sclq * rend.j,	
 		 sclp * start.k + sclq * rend.k	
 		);
+}
+
+static float lerp(float v0, float v1, float t)
+{
+	return (1 - t) * v0 + t * v1;
+}
+
+static inline vec3 vec_lerp(const vec3& source,const vec3& target,float t) {
+	vec3 ret;
+	ret.x = lerp(source.x,target.x,t);
+	ret.y = lerp(source.y,target.y,t);
+	ret.z = lerp(source.z,target.z,t);
+	return ret;
 }
 
 static inline float lenght(const vec3& v)
@@ -733,10 +815,6 @@ static inline int irand_range(int range)//inclusive and exclusive
 {
 	int inrange = rand() % range;
 	return inrange;
-}
-static float lerp(float v0, float v1, float t)
-{
-	return (1 - t) * v0 + t * v1;
 }
 static inline int max_val(int lhv,int rhv)
 {

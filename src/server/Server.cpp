@@ -133,11 +133,26 @@ void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 
 void Server::AddPlayerCube(std::string name)
 {
-	AddCube(ObjectType::Player, { 3,3,0 }, { 0,0,0 }); //We create cube for player
 	for(int i = 0; i < 4; i++)
 	{
 		if(PlayerSlot[i].name[0] == '\0')
 		{
+			switch (i)
+			{
+			case 0:
+				AddCube(ObjectType::Player, { -10,3,0 }, { 0,0,0 }); //We create cube for player
+				break;
+			case 1:
+				AddCube(ObjectType::Player, { 0,3,-10 }, { 0,0,0 }); //We create cube for player
+				break;
+			case 2:
+				AddCube(ObjectType::Player, { 10,3,0 }, { 0,0,0 }); //We create cube for player
+				break;
+			case 3:
+				AddCube(ObjectType::Player, { 0,3,10 }, { 0,0,0 }); //We create cube for player
+				break;
+			}
+
 			strcpy(PlayerSlot[i].name, name.c_str());
 			PlayerSlot[i].playerId = i;
 			PlayerSlot[i].kuutioId = Players.back().id;
@@ -354,18 +369,21 @@ void Server::ReadPlayerState(RakNet::Packet* packet)
 	bs.IgnoreBytes(sizeof(RakNet::MessageID));
 
 	vec3 lookDir;
-	inputType input;
-	bs.Read(lookDir);
+	//float yaw = 0;
+	Input input;
+	//bs.Read(lookDir);
+	//bs.Read(yaw);
 	bs.Read(input);
-	//printf("%i\n", input);
-	UpdatePlayerCube(packet->guid.ToString(),input,lookDir);
+	//printf("%f\n",yaw);
+	//printf("%i %i %i\n", lookDir.x, lookDir.y, lookDir.z);
+	UpdatePlayerCube(packet->guid.ToString(),input);
 	//extract input
 	//extract lookdir
 	//Handle input
 
 }
 
-void Server::UpdatePlayerCube(std::string guid, inputType input, vec3 lookDir)
+void Server::UpdatePlayerCube(std::string guid, Input playerInput)
 {
 	//W = 22, A = 0, S = 18, D = 3
 	//Check Input
@@ -374,36 +392,44 @@ void Server::UpdatePlayerCube(std::string guid, inputType input, vec3 lookDir)
 		if (slots[i] == guid)
 		{
 			Players[i].rb->activate(true);
-			vec3 cross = cross_product(lookDir, { 0,1,0 });
+
+			inputType input = playerInput.keys;
+			btTransform trans;
+			vec3 target(0, 0, 1);
+			Players[i].rb->getMotionState()->getWorldTransform(trans);
+			btQuaternion rotation = trans.getRotation();
+			quaternion newRotation(rotation.getW(),rotation.getX(), rotation.getY(), rotation.getZ());
+			target = rotate_vector_by_quaternion(target,newRotation);
+
+			vec3 cross = cross_product(target, { 0,1,0 });
 			cross = normalized(cross);
 
-			lookDir = lookDir * MovementSpeedMultiplier;
+			target = target * MovementSpeedMultiplier;
 			cross = cross * MovementSpeedMultiplier;
+
+			float yaw = playerInput.lastmpos.x - playerInput.mpos.x;
 
 			if ((input & (1 << 22)) != 0)
 			{
 				//printf("w\n");
-				Players[i].rb->applyCentralForce({lookDir.x,0,lookDir.z});
+				Players[i].rb->applyCentralForce({ target.x,0, target.z});
 			}
 			if ((input & (1 << 18)) != 0)
 			{
 				//printf("s\n");
-				Players[i].rb->applyCentralForce({-lookDir.x,0,-lookDir.z});
+				Players[i].rb->applyCentralForce({-target.z,0,-target.z});
 			}
 			if ((input & (1 << 0)) != 0)
 			{
 				//printf("a\n");
-				Players[i].rb->applyCentralForce({-cross.x,0,-cross.z});
+				Players[i].rb->applyCentralForce({ -cross.x,0, -cross.z});
 			}
 			if ((input & (1 << 3)) != 0)
 			{
 				//printf("d\n");
-				Players[i].rb->applyCentralForce({cross.x,0,cross.z});
+				Players[i].rb->applyCentralForce({cross.x,0,cross.y});
 			}
-			if ((input & (1 << 4)) != 0)
-			{
-				//pelaajan kohdalle. laatikko //forcellea katsomis suuntaan;
-			}
+			Players[i].rb->applyTorque({ 0,(yaw*turningSpeedMultiplier),0 });
 		}
 	}
 }

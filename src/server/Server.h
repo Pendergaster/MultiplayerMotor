@@ -13,6 +13,7 @@
 #include "UserVariables.h"
 #include "inputs.h"
 #include "objecttype.h"
+#include "math.h"
 
 #include "UserDatabase.cpp"
 
@@ -58,7 +59,7 @@ public:
 	void WriteBulk();
 	void AddPlayerCube(std::string name);
 	void RemovePlayerCube(std::string name);
-	void UpdatePlayerCube(std::string guid,inputType input, vec3 lookDir);
+	void UpdatePlayerCube(std::string guid,Input playerInput);
 	void ReadPlayerInput(RakNet::Packet* packet);
 	void ReadPlayerCoord(RakNet::Packet* packet);
 
@@ -108,6 +109,7 @@ private:
 	btSequentialImpulseConstraintSolver * solver;
 	btDiscreteDynamicsWorld * dynamicsWorld;
 	
-	float MovementSpeedMultiplier = 50;
+	float MovementSpeedMultiplier = 1;
+	float turningSpeedMultiplier = 0.01f;
 	int packetID = 0;
 };

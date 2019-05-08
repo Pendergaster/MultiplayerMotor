@@ -31,18 +31,15 @@ class Client
 {
 /*PUBLIC FUNCTIONS*/
 public:
-	Client(string IP, int Port,const char* username);
 	Client() {};
-	//Client(){}
 	~Client();
 	void Init(std::string IP, int Port, const char* username);
 	CustomMessages Update();
 	void OpenConnection();
 	void CloseConnection();
 	void RetryConnection();
-	void SendUsernameForServer(RakNet::RakString username);
-	RakNet::RakString GetUsername() { return RakNet::RakString(m_username.c_str());}
-	void UsernameChange(std::string* username);
+	void SendUsernameForServer();
+	//void UsernameChange(std::string* username);
 	void ReadPlayerSlot(RakNet::Packet* packet);
 	void CheckForVar(CustomMessages messageID);
 	void SetVar(CustomMessages MessageID, std::vector<string*> Vars);
@@ -61,7 +58,7 @@ private:
 public:
 	std::string m_ip;
 	int m_port;
-	std::string m_username;
+	char m_username[12];
 
 	bool Connected = false;
 	bool LoggedIn = false;
@@ -84,7 +81,8 @@ public:
 	int playerSlot;
 
 	vec3 lookDir;
-	inputType input;
+	float yaw;
+	Input input;
 
 /*PRIVATE VARIABLES*/
 private:

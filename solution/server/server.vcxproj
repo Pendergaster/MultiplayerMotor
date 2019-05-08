@@ -132,6 +132,7 @@
     <ClInclude Include="..\..\src\server\ClientInformation.h" />
     <ClInclude Include="..\..\src\server\GameState.h" />
     <ClInclude Include="..\..\src\server\inputs.h" />
+    <ClInclude Include="..\..\src\server\math.h" />
     <ClInclude Include="..\..\src\server\MessageCodes.h" />
     <ClInclude Include="..\..\src\server\objecttype.h" />
     <ClInclude Include="..\..\src\server\Server.h" />

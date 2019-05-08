@@ -5,21 +5,14 @@ using namespace std;
 
 #define CONSOLE(x) cout << x << endl;
 
-Client::Client(string IP, int Port, const char* username)
-{
-	this->m_ip = IP;
-	this->m_port = Port;
-	this->m_username = username;
-	string title = "Raknet-Client";
-	SetConsoleTitle(title.c_str());
-}
-
 void Client::Init(std::string IP, int Port, const char* username)
 {
-	this->m_ip = IP;
+	m_ip = std::string(IP);
+	//this->m_ip = IP;
 	//this->m_ip = "127.0.0.1";
 	this->m_port = Port;
-	this->m_username = username;
+	strcpy(m_username, username);
+	//this->m_username = username;
 	this->Peer = RakNet::RakPeerInterface::GetInstance();
 	this->SD = RakNet::SocketDescriptor(0, 0);
 
@@ -83,7 +76,7 @@ CustomMessages Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 		previousPacketID = 0;
 		CONSOLE("Connection with server at " << m_ip << " was succesful");
 		Connected = true;
-		SendUsernameForServer(this->m_username.c_str());
+		SendUsernameForServer();
 		break;
 	case ID_CONNECTION_LOST:
 		CONSOLE("Connection lost to server at " << m_ip);
@@ -105,7 +98,7 @@ CustomMessages Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 		break;
 	case LOGIN_FAILED:
 		CONSOLE("Server did not accept our username");
-		thread(&Client::UsernameChange, this, &m_username).detach();
+		//thread(&Client::UsernameChange, this, &m_username).detach();
 		LoggedIn = false;
 		break;
 	case USERNAME:
@@ -135,7 +128,7 @@ void Client::SendPlayerState()
 	RakNet::BitStream bs;
 	bs.Write((RakNet::MessageID)PLAYER_STATE);
 	//printf("%i", input);
-	bs.Write(lookDir);
+	//bs.Write(yaw);
 	bs.Write(input);
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
 }
@@ -152,20 +145,20 @@ void Client::RetryConnection()
 	//thread(&Client::UsernameChange, this).detach();
 }
 
-void Client::UsernameChange(std::string* username)
-{
-	using namespace chrono_literals;
-	std::this_thread::sleep_for(1s);
-	std::string newusername;
-	std::cout << "Anna username :";
-	cin >> newusername;
-	*username = newusername;
-
-	RakNet::BitStream bs;
-	bs.Write((RakNet::MessageID)USERNAME_FOR_GUID);
-	bs.Write(username);
-	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
-}
+//void Client::UsernameChange(std::string* username)
+//{
+//	using namespace chrono_literals;
+//	std::this_thread::sleep_for(1s);
+//	std::string newusername;
+//	std::cout << "Anna username :";
+//	cin >> newusername;
+//	*username = newusername;
+//
+//	RakNet::BitStream bs;
+//	bs.Write((RakNet::MessageID)USERNAME_FOR_GUID);
+//	bs.Write(username);
+//	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
+//}
 
 void Client::CheckForVar(CustomMessages messageID)
 {
@@ -229,11 +222,6 @@ void Client::ReadPlayerInfo(RakNet::Packet* packet)
 	bs.Read(size);
 
 	PlayerData newData;
-	//std::string name("asd");
-	int score;
-	int id;
-	int playerID;
-	char name[12];
 	Players.clear();
 	for (int i = 0; i < size; i++)
 	{
@@ -289,12 +277,13 @@ void Client::SetVar(CustomMessages MessageID, std::vector<string*> Vars)
 	MessageType regType(Type::STRING_TYPE, MessageID);
 	registeredServerValues.push_back(regType);
 }
-void Client::SendUsernameForServer(RakNet::RakString username)
+void Client::SendUsernameForServer()
 {
 	RakNet::BitStream BS;
 	BS.Write((RakNet::MessageID)USERNAME_FOR_GUID);
-	BS.Write(username);
-	this->m_username = username;
+	BS.Write(m_username);
+	//this->m_username = username;
+	//strcpy(m_username, );
 	Peer->Send(&BS, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
 }
 
