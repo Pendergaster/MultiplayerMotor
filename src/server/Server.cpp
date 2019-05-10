@@ -72,12 +72,15 @@ void Server::AddCube(ObjectType type, vec3 pos, vec3 rot)
 
 		btVector3 defaultIntertia(0, 0, 0);
 		btBoxShape* box = new btBoxShape({ player_scale.x, player_scale.y, player_scale.z });
-		box->calculateLocalInertia(free_mass, defaultIntertia);
+		box->calculateLocalInertia(free_mass*5, defaultIntertia);
 
 		btMotionState* boxmotion = new btDefaultMotionState(t);
-		btRigidBody::btRigidBodyConstructionInfo boxInfo(free_mass, boxmotion, box, defaultIntertia);
+		btRigidBody::btRigidBodyConstructionInfo boxInfo(free_mass*5, boxmotion, box, defaultIntertia);
 		btRigidBody* newBox = new btRigidBody(boxInfo);
 		newBox->setAngularFactor({ 0,1,0 });
+		newBox->setFriction(0.0f);
+		newBox->setSpinningFriction(0);
+		newBox->setDamping(0.5f, 0.5f);
 		dynamicsWorld->addRigidBody(newBox);
 		Players.push_back(Cube(Players.size()+Floors.size()+smallCubesActive.size() + 1, type, newBox));
 	}
@@ -411,23 +414,27 @@ void Server::UpdatePlayerCube(std::string guid, Input playerInput)
 
 			if ((input & (1 << 22)) != 0)
 			{
-				//printf("w\n");
+				printf("w\n");
+				//Players[i].rb->setLinearVelocity({ target.x,0, target.z});
 				Players[i].rb->applyCentralForce({ target.x,0, target.z});
 			}
 			if ((input & (1 << 18)) != 0)
 			{
-				//printf("s\n");
-				Players[i].rb->applyCentralForce({-target.z,0,-target.z});
+				printf("s\n");
+				//Players[i].rb->setLinearVelocity({-target.x,0,-target.z});
+				Players[i].rb->applyCentralForce({-target.x,0,-target.z});
 			}
 			if ((input & (1 << 0)) != 0)
 			{
-				//printf("a\n");
+				printf("a\n");
+				//Players[i].rb->setLinearVelocity({ -cross.x,0, -cross.z});
 				Players[i].rb->applyCentralForce({ -cross.x,0, -cross.z});
 			}
 			if ((input & (1 << 3)) != 0)
 			{
-				//printf("d\n");
-				Players[i].rb->applyCentralForce({cross.x,0,cross.y});
+				printf("d\n");
+				//Players[i].rb->setLinearVelocity({cross.x,0,cross.z});
+				Players[i].rb->applyCentralForce({cross.x,0,cross.z});
 			}
 			Players[i].rb->applyTorque({ 0,(yaw*turningSpeedMultiplier),0 });
 		}

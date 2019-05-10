@@ -109,7 +109,7 @@ private:
 	btSequentialImpulseConstraintSolver * solver;
 	btDiscreteDynamicsWorld * dynamicsWorld;
 	
-	float MovementSpeedMultiplier = 1;
-	float turningSpeedMultiplier = 0.01f;
+	float MovementSpeedMultiplier = 30;
+	float turningSpeedMultiplier = 0.025f;
 	int packetID = 0;
 };
