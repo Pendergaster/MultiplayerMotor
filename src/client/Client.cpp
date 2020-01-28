@@ -3,8 +3,6 @@
 using namespace RakNet;
 using namespace std;
 
-#define CONSOLE(x) cout << x << endl;
-
 void Client::Init(std::string IP, int Port, const char* username)
 {
 	m_ip = std::string(IP);
@@ -45,7 +43,7 @@ void Client::OpenConnection()
 
 CustomMessages Client::Update()
 {
-	CustomMessages ret;
+	CustomMessages ret = CustomMessages::UNKNOWN;
 	//auto TimeDifference = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - Delta);
 	/*Loads packet from peer*/
 	//if ((float)TimeDifference.count() > TimeInterval)
@@ -53,6 +51,7 @@ CustomMessages Client::Update()
 		//Delta += chrono::milliseconds((int)TimeInterval);
 		SendPlayerState();
 		isNewData = false;
+		printf("server took %f seconds to update \n", serverDelta);
 		for (m_packet = Peer->Receive(); m_packet != 0; m_packet = Peer->Receive())
 		{
 			/*Switch case that lets us check what kind of packet it was*/
@@ -68,7 +67,7 @@ CustomMessages Client::Update()
 
 CustomMessages Client::ClientConnectionUpdate(RakNet::Packet* Packet)
 {
-	CustomMessages ret;
+	CustomMessages ret = CustomMessages::UNKNOWN;
 	switch (Packet->data[0])
 	{
 	case ID_CONNECTION_REQUEST_ACCEPTED:
@@ -145,21 +144,6 @@ void Client::RetryConnection()
 	//thread(&Client::UsernameChange, this).detach();
 }
 
-//void Client::UsernameChange(std::string* username)
-//{
-//	using namespace chrono_literals;
-//	std::this_thread::sleep_for(1s);
-//	std::string newusername;
-//	std::cout << "Anna username :";
-//	cin >> newusername;
-//	*username = newusername;
-//
-//	RakNet::BitStream bs;
-//	bs.Write((RakNet::MessageID)USERNAME_FOR_GUID);
-//	bs.Write(username);
-//	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
-//}
-
 void Client::CheckForVar(CustomMessages messageID)
 {
 	RakNet::BitStream bs;
@@ -204,7 +188,6 @@ void Client::CheckForVar(CustomMessages messageID)
 		Peer->Send(&bs, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
 	}
 }
-
 void Client::ReadPlayerSlot(RakNet::Packet* packet)
 {
 	RakNet::BitStream bs(packet->data, packet->length, 0);
@@ -212,7 +195,6 @@ void Client::ReadPlayerSlot(RakNet::Packet* packet)
 
 	bs.Read(playerSlot);
 }
-
 void Client::ReadPlayerInfo(RakNet::Packet* packet)
 {
 	RakNet::BitStream bs(packet->data, packet->length, 0);
@@ -242,7 +224,6 @@ void Client::ReadPlayerInfo(RakNet::Packet* packet)
 	}
 	//name.clear();
 }
-
 void Client::SetVar(CustomMessages MessageID, std::vector<int*> Vars)
 {
 	Var<int> tmp;
@@ -254,7 +235,6 @@ void Client::SetVar(CustomMessages MessageID, std::vector<int*> Vars)
 	MessageType regType(Type::INT_TYPE, MessageID);
 	registeredServerValues.push_back(regType);
 }
-
 void Client::SetVar(CustomMessages MessageID, std::vector<float*> Vars)
 {
 	Var<float> tmp;
@@ -286,7 +266,6 @@ void Client::SendUsernameForServer()
 	//strcpy(m_username, );
 	Peer->Send(&BS, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, HostAddress, false, 0);
 }
-
 void Client::ReadCubeInfo(BitStream* bs)
 {
 	int i = 0;
@@ -325,19 +304,6 @@ void Client::ReadCubeInfo(BitStream* bs)
 	}
 }
 
-//void Client::ReadPlayerInfo(RakNet::BitStream* bs)
-//{
-//	int i = 0;
-//	bs->Read(i);
-//	playerPos = vector<btVector3>(i);
-//	playerRot = vector<btQuaternion>(i);
-//	for (int x = 0; x < i; x++)
-//	{
-//		bs->Read(playerPos[x]);
-//		bs->Read(playerRot[x]);
-//	}
-//}
-
 void Client::ReadBulk(RakNet::Packet* packet)
 {
 	RakNet::BitStream bs(packet->data, packet->length, 0);
@@ -348,6 +314,10 @@ void Client::ReadBulk(RakNet::Packet* packet)
 	//printf("%i\n", packetID);
 	if (previousPacketID < packetID)
 	{
+		if ((packetID - previousPacketID) > 1)
+		{
+			std::cout << "Packetti missattu " + packetID + ' ' + previousPacketID << endl;
+		}
 		previousPacketID = packetID;
 		isNewData = true; //switchi joka flippaa kun on saapunut paketti jossa on uutta dataa
 	}
@@ -363,9 +333,13 @@ void Client::ReadBulk(RakNet::Packet* packet)
 		case PLAYER_INFO:
 			//ReadPlayerInfo(&bs);
 			break;
+		case SERVER_DELTA:
+			bs.Read(serverDelta); //Luetaan kauan servulla kesti updatessa
+			break;
 		default:
 			return;
 			break;
 		}
 	}
 }
+double Client::GetServerDelta() { return serverDelta; }

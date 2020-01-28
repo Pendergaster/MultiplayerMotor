@@ -48,20 +48,13 @@ public:
 	void ServerStop();
 	void ServerUpdate();
 	void CheckPacket(const RakNet::Packet& P);
-	bool AskForVariable(CustomMessages var, INT64 guid);
-	bool AskForVariable(CustomMessages var, string username);
-	void RequestFromAll(CustomMessages var);
 	void SendResponse(RakNet::SystemAddress sys, CustomMessages responseID);
-	void SendSlotID(RakNet::SystemAddress addr, int id);
-	void BroadcastVar(CustomMessages Var, RakNet::Packet Packet);
 	void SendCubeInfo();
 	void ReadPlayerState(RakNet::Packet* packet);
 	void WriteBulk();
 	void AddPlayerCube(std::string name);
 	void RemovePlayerCube(std::string name);
 	void UpdatePlayerCube(std::string guid,Input playerInput);
-	void ReadPlayerInput(RakNet::Packet* packet);
-	void ReadPlayerCoord(RakNet::Packet* packet);
 
 	/*Version 2*/
 	void RemoveSmallCube(int id);
@@ -114,4 +107,5 @@ private:
 	float MovementSpeedMultiplier = 30;
 	float turningSpeedMultiplier = 0.025f;
 	int packetID = 0;
+	double serverDelta = 0;
 };

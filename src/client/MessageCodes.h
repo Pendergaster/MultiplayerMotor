@@ -23,6 +23,8 @@ enum CustomMessages
 	PLAYER_SLOT,
 	PLAYER_LOOK_DIR,
 	PLAYER_STATE,
+	SERVER_DELTA,
+	UNKNOWN,
 };
 
 enum Type

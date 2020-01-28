@@ -28,11 +28,11 @@ void Server::InitBulletWorld()
 
 	dynamicsWorld->setGravity(btVector3(physics_gravity.x,physics_gravity.y,physics_gravity.z));
 
-	AddCube(ObjectType::Floor, { 0.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
-	AddCube(ObjectType::Floor, { -20.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
-	AddCube(ObjectType::Floor, { 0.0f,0.0f,-20.0f }, { 0.0f,0.0f,0.0f });
-	AddCube(ObjectType::Floor, { 20.0f,0.0f,0.0f }, { 0.0f,0.0f,0.0f });
-	AddCube(ObjectType::Floor, { 0.0f,0.0f,20.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 0.0f,-4.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { -20.0f,-4.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 0.0f,-4.0f,-20.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 20.0f,-4.0f,0.0f }, { 0.0f,0.0f,0.0f });
+	AddCube(ObjectType::Floor, { 0.0f,-4.0f,20.0f }, { 0.0f,0.0f,0.0f });
 
 	for (int x = 0; x < 3; x++) //tehd‰‰n cubet mappiin
 	{
@@ -189,7 +189,7 @@ void Server::ServerStart()
 	CONSOLE("Starting server at port " << Port);
 
 	Delta120 = chrono::system_clock::now();
-	TimeInterval = (int)((1.0 / 30) * 1000);
+	TimeInterval = (int)((1.0 / 30) * 1000000);
 
 	running = true;
 }
@@ -203,16 +203,17 @@ void Server::ServerStop()
 
 void Server::ServerUpdate()
 {
-	auto Delta = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now() - Delta120);
+	auto Delta = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now() - Delta120);
 	/*Loads packet from peer*/
 	if ((float)Delta.count() > TimeInterval)
 	{
-		Delta120 += chrono::milliseconds((int)TimeInterval);
-
+		Delta120 += chrono::microseconds((int)TimeInterval);
+		serverDelta = (double)Delta.count() / 1000000; //Kuinka kauan serverill‰ kesti p‰‰st‰ update funktioon
+		std::cout << "took " << serverDelta << " seconds" << endl;
+		dynamicsWorld->stepSimulation(1.0 / 30.0,8);
 		//SendCubeInfo();
 		WriteBulk();
 		SendPlayerInfo();
-		dynamicsWorld->stepSimulation(1.0 / 30.0,8);
 		CheckCubes();
 
 		for (Packet = Peer->Receive(); Packet; Packet = Peer->Receive())
@@ -243,68 +244,10 @@ void Server::CheckPacket(const RakNet::Packet& P)
 		RemovePlayerCube(Packet->guid.ToString());
 		CONSOLE(Packet->guid.ToString() << " Connection lost");
 		break;
-	case PLAYER_COORD:
-		ReadPlayerCoord(Packet);
-		break;
-	case PLAYER_INPUT:
-		ReadPlayerInput(Packet);
-		break;
 	case PLAYER_STATE:
 		ReadPlayerState(Packet);
 		break;
 	}
-}
-
-void Server::BroadcastVar(CustomMessages Var, RakNet::Packet Packet)
-{
-	RakNet::BitStream bs(Packet.data,Packet.length,false);
-	Peer->Send(&bs, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, Packet.systemAddress, true, 0);
-}
-
-void Server::ReadPlayerCoord(RakNet::Packet* packet)
-{
-	RakNet::BitStream bs(packet->data,packet->length,false);
-	bs.IgnoreBytes(sizeof(RakNet::MessageID));
-
-	int x;
-	int y;
-
-	bs.Read(x);
-	bs.Read(y);
-	std::string user = Connections->FindUsername(packet->guid.ToString());
-	if (user != "NONE")
-	{
-		CONSOLE("Received " << x << ", " << y << " From: " << user);
-	}
-}
-
-void Server::ReadPlayerInput(RakNet::Packet* packet)
-{
-	RakNet::BitStream bs(packet->data, packet->length, false);
-	bs.IgnoreBytes(sizeof(RakNet::MessageID));
-
-	int w = 0;
-	int a = 0;
-	int s = 0;
-	int d = 0;
-	bs.Read(w);
-	bs.Read(a);
-	bs.Read(s);
-	bs.Read(d);
-	//if (players.size() != 0)
-	//{
-	//	//std::string target = Connections->FindUsername(packet->guid.ToString());
-	//	for (int i = 0; i < players.size(); i++)
-	//	{
-	//		if (slots[i] == packet->guid.ToString())
-	//		{
-	//			players[i]->activate(true);
-	//			players[i]->applyCentralForce({ (float)((a-d)*20),0,(float)((w-s)*20) });
-	//		}
-	//	}
-	//}
-	//TODO(mika) handlaa inputit;
-	//printf("w: %i, a: %i, s: %i, d: %i, from: %s\n",w,a,s,d,packet->guid.ToString());
 }
 
 void Server::SendResponse(RakNet::SystemAddress sys, CustomMessages responseID)
@@ -312,43 +255,6 @@ void Server::SendResponse(RakNet::SystemAddress sys, CustomMessages responseID)
 	RakNet::BitStream bs;
 	bs.Write((MessageID)responseID);
 	Peer->Send(&bs, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, sys, false, 0);
-}
-
-bool Server::AskForVariable(CustomMessages var, INT64 guid)
-{
-	RakNet::BitStream bs;
-	RakNet::RakNetGUID rakguid;
-	rakguid.FromString(to_string(guid).c_str());
-
-	bs.Write((RakNet::MessageID)var);
-	Peer->Send(&bs, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, rakguid, false, 0);
-	return true;
-}
-
-bool Server::AskForVariable(CustomMessages var, string username)
-{
-	string guid = Connections->FindGuid(username);
-	if (guid == "NONE")
-	{
-		return false;
-	}
-	INT64 guidint = stoll(guid);
-	return AskForVariable(var, guidint);
-}
-
-void Server::RequestFromAll(CustomMessages Requested)
-{
-	RakNet::BitStream bs;
-	bs.Write((RakNet::MessageID)Requested);
-	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
-}
-
-void Server::SendSlotID(RakNet::SystemAddress addr, int id)
-{
-	RakNet::BitStream bs;
-	bs.Write((MessageID)PLAYER_SLOT);
-	bs.Write(id);
-	Peer->Send(&bs, MEDIUM_PRIORITY, RELIABLE_ORDERED, 0, addr, false, 0);
 }
 
 void Server::SendCubeInfo()
@@ -373,18 +279,9 @@ void Server::ReadPlayerState(RakNet::Packet* packet)
 	bs.IgnoreBytes(sizeof(RakNet::MessageID));
 
 	vec3 lookDir;
-	//float yaw = 0;
 	Input input;
-	//bs.Read(lookDir);
-	//bs.Read(yaw);
 	bs.Read(input);
-	//printf("%f\n",yaw);
-	//printf("%i %i %i\n", lookDir.x, lookDir.y, lookDir.z);
 	UpdatePlayerCube(packet->guid.ToString(),input);
-	//extract input
-	//extract lookdir
-	//Handle input
-
 }
 
 void Server::UpdatePlayerCube(std::string guid, Input playerInput)
@@ -396,7 +293,6 @@ void Server::UpdatePlayerCube(std::string guid, Input playerInput)
 		if (slots[i] == guid)
 		{
 			Players[i].rb->activate(true);
-
 			inputType input = playerInput.keys;
 			btTransform trans;
 			vec3 target(0, 0, 1);
@@ -416,25 +312,21 @@ void Server::UpdatePlayerCube(std::string guid, Input playerInput)
 			if ((input & (1 << 22)) != 0)
 			{
 				//printf("w\n");
-				//Players[i].rb->setLinearVelocity({ target.x,0, target.z});
 				Players[i].rb->applyCentralForce({ target.x,0, target.z});
 			}
 			if ((input & (1 << 18)) != 0)
 			{
 				//printf("s\n");
-				//Players[i].rb->setLinearVelocity({-target.x,0,-target.z});
 				Players[i].rb->applyCentralForce({-target.x,0,-target.z});
 			}
 			if ((input & (1 << 0)) != 0)
 			{
 				//printf("a\n");
-				//Players[i].rb->setLinearVelocity({ -cross.x,0, -cross.z});
 				Players[i].rb->applyCentralForce({ -cross.x,0, -cross.z});
 			}
 			if ((input & (1 << 3)) != 0)
 			{
 				//printf("d\n");
-				//Players[i].rb->setLinearVelocity({cross.x,0,cross.z});
 				Players[i].rb->applyCentralForce({cross.x,0,cross.z});
 			}
 			Players[i].rb->applyTorque({ 0,(yaw*turningSpeedMultiplier),0 });
@@ -486,27 +378,18 @@ void Server::WriteBulk()
 			Players[i].rb->getMotionState()->getWorldTransform(trans);
 			bs.Write(trans.getOrigin());
 			bs.Write(trans.getRotation());
+			//bs.Write(Players[i].rb->getLinearVelocity()); //TODO: ehk‰ t‰m‰kin.
 		}
 	}
-
+	bs.Write((RakNet::MessageID)SERVER_DELTA);
+	bs.Write(serverDelta);
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
 }
 
 void Server::SendPlayerInfo()
 {
 	RakNet::BitStream bs;
-
 	bs.Write((MessageID)PLAYER_INFO);
-
-	//int size = 0;
-	//for (int i = 0; i < 4; i++)
-	//{
-	//	if (PlayerSlot[i].name[0] != '\0')
-	//	{
-	//		size++;
-	//	}
-	//}
-
 	bs.Write(playerAmount);
 
 	for (int i = 0; i < 4; i++)

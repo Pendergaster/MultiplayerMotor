@@ -48,6 +48,7 @@ public:
 	void ReadBulk(RakNet::Packet* packet);
 	void ReadCubeInfo(RakNet::BitStream* bs);
 	void ReadPlayerInfo(RakNet::Packet* packet);
+	double GetServerDelta();
 	void SendPlayerState();
 
 /*PRIVATE FUNCTIONS*/
@@ -94,5 +95,6 @@ private:
 		
 	std::chrono::system_clock::time_point Delta;
 	float TimeInterval;
+	double serverDelta;
 };
 
