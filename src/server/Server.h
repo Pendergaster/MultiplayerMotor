@@ -68,6 +68,8 @@ public:
 	void AddCube(ObjectType type, vec3 pos, vec3 rot);
 	void SendSmallCubeInfo();
 	void SendPlayerInfo();
+	void CheckScore();
+	void CheckCubes();
 
 	/*Private variables*/
 private:

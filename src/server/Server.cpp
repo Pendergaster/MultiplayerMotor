@@ -213,6 +213,7 @@ void Server::ServerUpdate()
 		WriteBulk();
 		SendPlayerInfo();
 		dynamicsWorld->stepSimulation(1.0 / 30.0,8);
+		CheckCubes();
 
 		for (Packet = Peer->Receive(); Packet; Packet = Peer->Receive())
 		{
@@ -414,25 +415,25 @@ void Server::UpdatePlayerCube(std::string guid, Input playerInput)
 
 			if ((input & (1 << 22)) != 0)
 			{
-				printf("w\n");
+				//printf("w\n");
 				//Players[i].rb->setLinearVelocity({ target.x,0, target.z});
 				Players[i].rb->applyCentralForce({ target.x,0, target.z});
 			}
 			if ((input & (1 << 18)) != 0)
 			{
-				printf("s\n");
+				//printf("s\n");
 				//Players[i].rb->setLinearVelocity({-target.x,0,-target.z});
 				Players[i].rb->applyCentralForce({-target.x,0,-target.z});
 			}
 			if ((input & (1 << 0)) != 0)
 			{
-				printf("a\n");
+				//printf("a\n");
 				//Players[i].rb->setLinearVelocity({ -cross.x,0, -cross.z});
 				Players[i].rb->applyCentralForce({ -cross.x,0, -cross.z});
 			}
 			if ((input & (1 << 3)) != 0)
 			{
-				printf("d\n");
+				//printf("d\n");
 				//Players[i].rb->setLinearVelocity({cross.x,0,cross.z});
 				Players[i].rb->applyCentralForce({cross.x,0,cross.z});
 			}
@@ -456,7 +457,7 @@ void Server::WriteBulk()
 	{
 		bs.Write((RakNet::MessageID)CUBE_INFO);
 		
-		int size = smallCubesActive.size() + Floors.size() + Players.size();
+		int size = (int)smallCubesActive.size() + (int)Floors.size() + (int)Players.size();
 		bs.Write(size);
 
 		for (int i = 0; i < Floors.size(); i++)
@@ -526,7 +527,7 @@ void Server::SendSmallCubeInfo()
 	RakNet::BitStream bs;
 	btTransform trans;
 	bs.Write((RakNet::MessageID)CUBE_INFO);
-	int size = smallCubesActive.size();
+	size_t size = smallCubesActive.size();
 	bs.Write(size);
 
 	for (int i = 0; i < size; i++)
@@ -540,4 +541,61 @@ void Server::SendSmallCubeInfo()
 	}
 
 	Peer->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true, 0);
+}
+
+void Server::CheckCubes()
+{
+	for (int i = 0; i < PlayerSlot.size(); i++)
+	{
+		PlayerSlot[i].score = 0;
+	}
+
+	btTransform trans;
+	btVector3 newpos(0,5,0);
+	for (int i = 0; i < smallCubesActive.size(); i++)
+	{
+		smallCubesActive[i].rb->getMotionState()->getWorldTransform(trans);
+
+		if (trans.getOrigin().getX() < -10)
+		{
+			PlayerSlot[0].score++;
+		}
+		else if (trans.getOrigin().getZ() < -10)
+		{
+			PlayerSlot[1].score++;
+		}
+		else if (trans.getOrigin().getX() > 10)
+		{
+			PlayerSlot[2].score++;
+		}
+		else if (trans.getOrigin().getZ() > 10)
+		{
+			PlayerSlot[3].score++;
+		}
+
+		if (trans.getOrigin().getY() < -5)
+		{
+			newpos.setX((rand() % 200)/10.0f - 10.0f);
+			newpos.setZ((rand() % 200)/10.0f - 10.0f);
+			trans.setOrigin(newpos);
+			trans.setRotation({ 0,0,0 });
+			smallCubesActive[i].rb->setWorldTransform(trans);
+			smallCubesActive[i].rb->clearForces();
+			smallCubesActive[i].rb->setLinearVelocity({ 0,0,0 });
+			smallCubesActive[i].rb->setAngularVelocity({ 0,0,0 });
+		}
+	}
+	for (int i = 0; i < Players.size(); i++)
+	{
+		Players[i].rb->getMotionState()->getWorldTransform(trans);
+		if (trans.getOrigin().getY() < -5)
+		{
+			trans.setOrigin(newpos);
+			trans.setRotation({ 0,0,0 });
+			Players[i].rb->setWorldTransform(trans);
+			Players[i].rb->clearForces();
+			Players[i].rb->setLinearVelocity({ 0,0,0 });
+			Players[i].rb->setAngularVelocity({ 0,0,0 });
+		}
+	}
 }
