@@ -189,7 +189,7 @@ void Server::ServerStart()
 	CONSOLE("Starting server at port " << Port);
 
 	Delta120 = chrono::system_clock::now();
-	TimeInterval = (int)((1.0 / 30) * 1000000);
+	TimeInterval = (int)((1.0 / 30.0) * 1000000.0);
 
 	running = true;
 }
@@ -207,9 +207,22 @@ void Server::ServerUpdate()
 	/*Loads packet from peer*/
 	if ((float)Delta.count() > TimeInterval)
 	{
+		{
+			// Record start time
+			static auto last = std::chrono::high_resolution_clock::now();
+			// Record end time
+			auto current = std::chrono::high_resolution_clock::now();
+
+			std::chrono::duration<double> elapsed = current - last;
+			std::cout << "TIME " << elapsed.count() << std::endl;
+			//last = current;
+			serverDelta = elapsed.count();
+		}
+
 		Delta120 += chrono::microseconds((int)TimeInterval);
-		serverDelta = (double)Delta.count() / 1000000; //Kuinka kauan serverillä kesti päästä update funktioon
-		std::cout << "took " << serverDelta << " seconds" << endl;
+		//serverDelta = (double)Delta.count() / 1000000.0; //Kuinka kauan serverillä kesti päästä update funktioon
+		//serverDelta = (double)Delta.count() / 1000000; //Kuinka kauan serverillä kesti päästä update funktioon
+		//std::cout << "took " << serverDelta << " seconds" << endl;
 		dynamicsWorld->stepSimulation(1.0 / 30.0,8);
 		//SendCubeInfo();
 		WriteBulk();
@@ -222,6 +235,7 @@ void Server::ServerUpdate()
 			Peer->DeallocatePacket(Packet);
 		}
 	}
+
 }
 
 void Server::CheckPacket(const RakNet::Packet& P)
