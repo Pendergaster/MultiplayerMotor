@@ -314,10 +314,18 @@ void Client::ReadBulk(RakNet::Packet* packet)
 	//printf("%i\n", packetID);
 	if (previousPacketID < packetID)
 	{
+<<<<<<< Updated upstream
 		if ((packetID - previousPacketID) > 1)
 		{
 			std::cout << "Packetti missattu " + packetID + ' ' + previousPacketID << endl;
 		}
+=======
+        std::cout << packetID << std::endl;
+        if((packetID - previousPacketID) > 1) {
+            std::cout << "LKASDJSAKLDJSAKLDJSKA LJD SAKL JSAKL DJS ALKD JSAKL  " << std::endl;
+        }
+
+>>>>>>> Stashed changes
 		previousPacketID = packetID;
 		isNewData = true; //switchi joka flippaa kun on saapunut paketti jossa on uutta dataa
 	}

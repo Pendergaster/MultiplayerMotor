@@ -3,23 +3,23 @@
 #include "utils.h"
 #include "math.h"
 enum class ObjectType : int {
-	Floor,
-	FreeSimulation,
-	Player,
-	Inactive,
+    Floor,
+    FreeSimulation,
+    Player,
+    Inactive,
 };
 
 struct ObjectTracker {
-	ObjectType	type;
-	vec3		pos;
-	quaternion	orientation;
+    ObjectType  type;
+    vec3        pos;
+    quaternion  orientation;
 };
 
 struct PlayerData {
-	char	name[12];
-	int		score;
-	int		kuutioId;
-	int		playerId;
+    char    name[12];
+    int     score;
+    int     kuutioId;
+    int     playerId;
 };
 
 const vec3 floor_scale(10,1,10);
