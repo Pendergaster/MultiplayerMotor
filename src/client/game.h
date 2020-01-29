@@ -17,6 +17,7 @@
 #include "cppincludes.h"
 #endif
 #include <imgui/imgui.h>
+#include <chrono>
 
 #define DEFAULT_DYNAMICARRAY_SIZE 6
 static void* get_dynamicArray(const u32 size)
@@ -236,6 +237,7 @@ DECLARECOMPONENT(NetWorkSync,
         double                  currentTime;
         double                  lastTime;
         double                  targetTime;
+        double                  serverTime;
         );
 
 // pushes box to renderer, color
@@ -416,289 +418,340 @@ UPDATEFUNC(PlayerCamera) {
     render_cube(&game->renderer,comp->playerTrans->pos + target,
             {0.2,0.2,0.2},{0,0,0,1},{0,0,255,255});
 #endif
-}
-
-Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data,
-        vec3 pos,vec3 scale,quaternion orientation);
-Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
-Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
-
-InterpolationData spawn_network_object(Game* game,const ObjectTracker& track,int id) {
-    LOG("Spewning new object!");
-    InterpolationData ret;
-    ret.first.track = track;
-    ret.last.track = track;
-    switch(track.type) {
-        case ObjectType::Floor: {
-                                    Entity* temp = get_floor_object(game,track.pos,floor_scale,
-                                            track.orientation);
-                                    ret.ent = temp;
-                                    ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
-                                    ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
-                                } break;
-        case ObjectType::FreeSimulation: {
-                                             Entity* temp = get_freesimulation_object(game,track.pos,
-                                                     free_scale,track.orientation);
-                                             ret.ent = temp;
-                                             ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
-                                             ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
-                                         } break;
-        case ObjectType::Player: {
-                                     const std::vector<PlayerData>& pldata = game->connection.Players;
-                                     Entity* temp = get_player_object(game,id+1,pldata,track.pos,
-                                             player_scale,track.orientation);
-                                     ret.ent = temp;
-                                     ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
-                                     ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
-
-                                 } break;
-        default : ABORT_MESSAGE("unknown object spawning!");
     }
-    return ret;
-}
 
-UPDATEFUNC(NetWorkSync) {
-    comp->currentTime = glfwGetTime();
+    Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data,
+            vec3 pos,vec3 scale,quaternion orientation);
+    Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
+    Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 
-    if(game->connection.isNewData) {
-        comp->lastTime = comp->targetTime;
-        comp->targetTime = comp->currentTime;
-        const std::vector<ObjectTracker>& serverobjs = game->connection.Objects;
-        for(size_t i = 0; i < serverobjs.size();i++) {
-            if(i >= dynamic_array_size(comp->objs)) {
-                // spawn if more objecs have came
-                InterpolationData temp = spawn_network_object(game,serverobjs[i],i);
-                //internal_push_dynamicArray((void**)&comp->objs,&temp,sizeof(*comp->objs));
-                dynamic_push_back(comp->objs,&temp);
-                //comp->objs.push_back(temp);
-            } else if(serverobjs[i].type != comp->objs[i].first.track.type) {
-                // (de)spawn if type is different
-                if(serverobjs[i].type != ObjectType::Inactive) {
+    InterpolationData spawn_network_object(Game* game,const ObjectTracker& track,int id) {
+        LOG("Spewning new object!");
+        InterpolationData ret;
+        ret.first.track = track;
+        ret.last.track = track;
+        switch(track.type) {
+            case ObjectType::Floor: {
+                                        Entity* temp = get_floor_object(game,track.pos,floor_scale,
+                                                track.orientation);
+                                        ret.ent = temp;
+                                        ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
+                                        ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
+                                    } break;
+            case ObjectType::FreeSimulation: {
+                                                 Entity* temp = get_freesimulation_object(game,track.pos,
+                                                         free_scale,track.orientation);
+                                                 ret.ent = temp;
+                                                 ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
+                                                 ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
+                                             } break;
+            case ObjectType::Player: {
+                                         const std::vector<PlayerData>& pldata = game->connection.Players;
+                                         Entity* temp = get_player_object(game,id+1,pldata,track.pos,
+                                                 player_scale,track.orientation);
+                                         ret.ent = temp;
+                                         ret.trans = (TransformComponent*)get_component_from_entity(temp,Transform);
+                                         ASSERT_MESSAGE(ret.trans,"FAILED TO FIND TRANSFORM");
+
+                                     } break;
+            default : ABORT_MESSAGE("unknown object spawning!");
+        }
+        return ret;
+    }
+
+    UPDATEFUNC(NetWorkSync) {
+
+        //printf("delta is %f/n", comp->currentTime - lastTime);
+#if 0
+        {
+            // Record start time
+            static auto last = std::chrono::high_resolution_clock::now();
+            // Record end time
+            auto current = std::chrono::high_resolution_clock::now();
+
+            std::chrono::duration<double> elapsed = current - last;
+            std::cout << "TIME " <<  elapsed.count() << std::endl;
+            last = current;
+        }
+#endif
+
+        static double oldTime = 0;
+        static double targetTime = 0;
+        static double timeWindow = 0;
+        static double deltaTime = 0;
+
+
+        static double lastTime = glfwGetTime();
+        double currentTime = glfwGetTime();
+        if(timeWindow != 0)
+            deltaTime += currentTime - lastTime;
+        float deltaTemp = currentTime - lastTime;
+        lastTime = currentTime;
+
+        //double currentTime = glfwGetTime();
+        printf("delta %f timeWin %f\n", deltaTime, timeWindow);
+        if(game->connection.isNewData) {
+
+            //double oldTime =  comp->serverTime;
+            if(timeWindow != 0)
+                deltaTime = deltaTime - timeWindow;
+            oldTime = targetTime;
+            targetTime = game->connection.GetServerDelta();
+            if(oldTime != 0)
+                timeWindow = targetTime - oldTime;
+
+            printf(" %f %f %f %f %f \n", deltaTime, oldTime, targetTime, timeWindow, deltaTemp);
+
+            //oldTime = newTime;
+
+            //comp->serverTime = newTime;
+
+            //printf("serverdelta %f\n", comp->serverTime);
+
+            // how large was last time window
+            // double timeWindow = comp->targetTime - comp->lastTime;
+
+
+            //comp->lastTime = comp->targetTime;
+            //comp->targetTime = comp->currentTime;
+
+
+
+            const std::vector<ObjectTracker>& serverobjs = game->connection.Objects;
+            for(size_t i = 0; i < serverobjs.size();i++) {
+                if(i >= dynamic_array_size(comp->objs)) {
+                    // spawn if more objecs have came
                     InterpolationData temp = spawn_network_object(game,serverobjs[i],i);
-                    comp->objs[i] = temp;
-                } else {
-                    LOG("DISPOSING!");
-                    dispose_entity(game,comp->objs[i].ent);
-                    comp->objs[i].first.track.type =  ObjectType::Inactive;
-                    comp->objs[i].last.track.type =  ObjectType::Inactive;
-                }
-            } else if (comp->objs[i].first.track.type != ObjectType::Inactive){
-                //sync objects
-                comp->objs[i].first = comp->objs[i].last;
-                //comp->objs[i].first.track.pos = comp->objs[i].trans->pos;
-                comp->objs[i].last.track = serverobjs[i];
-            }
-        }
-        //return;
-    }
-
-    size_t size = dynamic_array_size(comp->objs);
-    double timeWindow = comp->targetTime - comp->lastTime;
-    double current = comp->currentTime - comp->targetTime;
-    double delta = current / timeWindow;
-
-    printf("delta %f\n", delta);
-
-    for(InterpolationData* data = comp->objs; data != comp->objs + size; data++) {
-        if(data->first.track.type == ObjectType::Inactive) continue;
-        vec3 target = data->last.track.pos - data->first.track.pos;
-        target = data->first.track.pos + target;
-        data->trans->pos = vec_lerp(data->first.track.pos,data->last.track.pos,delta);
-        data->trans->orientation = interpolate_q(data->first.track.orientation,
-                data->last.track.orientation,delta);
-
-        normalize(&data->trans->orientation);
-    }
-    for(const PlayerData& data : game->connection.Players) {
-        ImGui::Text("Player: %s -- Score %d",data.name,data.score);
-    }
-}
-
-static char name[64] = "";
-bool update_components(Game* game) {
-    //ImGui::ShowDemoWindow();
-    ImGui::Begin("Supa kame");
-    defer{ImGui::End();};
-    static bool loggedIn = false;
-    if(!loggedIn) {
-        static bool triedToLog = false;
-        static char buf1[12] = "";
-        static int port = 0;
-        if(!triedToLog) {
-            static bool fileLoaded = false;
-            if(!fileLoaded)  {
-                if(does_file_exist("connection.info")) {
-                    size_t size = 0;
-                    char* data = load_file("connection.info",&size);
-                    if(size < 64){
-                        sscanf(data,"%s %d %s",buf1,&port,name);
+                    //internal_push_dynamicArray((void**)&comp->objs,&temp,sizeof(*comp->objs));
+                    dynamic_push_back(comp->objs,&temp);
+                    //comp->objs.push_back(temp);
+                } else if(serverobjs[i].type != comp->objs[i].first.track.type) {
+                    // (de)spawn if type is different
+                    if(serverobjs[i].type != ObjectType::Inactive) {
+                        InterpolationData temp = spawn_network_object(game,serverobjs[i],i);
+                        comp->objs[i] = temp;
+                    } else {
+                        LOG("DISPOSING!");
+                        dispose_entity(game,comp->objs[i].ent);
+                        comp->objs[i].first.track.type =  ObjectType::Inactive;
+                        comp->objs[i].last.track.type =  ObjectType::Inactive;
                     }
-                    free(data);
-                    fileLoaded = true;
+                } else if (comp->objs[i].first.track.type != ObjectType::Inactive){
+                    //sync objects
+                    comp->objs[i].first = comp->objs[i].last;
+                    //comp->objs[i].first.track.pos = comp->objs[i].trans->pos;
+                    comp->objs[i].last.track = serverobjs[i];
                 }
             }
-            ImGui::InputText("name", name, 12);
-            ImGui::InputText("address", buf1, 64);
-            ImGui::InputInt("port", &port, 1);
-            if (ImGui::Button("Log in")) {
-                // 60000
-                game->connection.Init(buf1,abs(port), name);
-                game->connection.OpenConnection();
-                triedToLog = true;
-                FILE* f = fopen("connection.info","w");
-                if(f) fprintf(f,"%s %d %s",buf1,port,name);
-                fclose(f);
-            }
-        } else {
-            if (LOGIN_ACCEPTED == game->connection.Update()) {
-                loggedIn = true;
-                disable_cursor();
-            }
-            static double timer = 4.0;
-
-            timer -= 1.0 / 60.0;
-            if(timer < 0 ) return 0;
         }
 
-    } else {
-        game->connection.input = game->inputs;
-        //game->connection.yaw = game->inputs.lastmpos.x - game->inputs.mpos.x ;
-        game->connection.Update();
+        size_t size = dynamic_array_size(comp->objs);
+        //double timeWindow = comp->targetTime - comp->lastTime;
+        //double current = comp->currentTime - comp->targetTime;
+        double delta = deltaTime / timeWindow;
 
-        COMPONENT_TYPES(UPDATE_COMPONENT)
+        printf("delta %f\n", delta);
+
+        for(InterpolationData* data = comp->objs; data != comp->objs + size; data++) {
+            if(data->first.track.type == ObjectType::Inactive) continue;
+            vec3 target = data->last.track.pos - data->first.track.pos;
+            target = data->first.track.pos + target;
+            data->trans->pos = vec_lerp(data->first.track.pos,data->last.track.pos,delta);
+            data->trans->orientation = interpolate_q(data->first.track.orientation,
+                    data->last.track.orientation,delta);
+
+            normalize(&data->trans->orientation);
+        }
+        for(const PlayerData& data : game->connection.Players) {
+            ImGui::Text("Player: %s -- Score %d",data.name,data.score);
+        }
     }
 
-    quaternion q1({0,1,0},deg_to_rad * 1.f);
-    vec3 temp(0,1,0.5);
-    normalize(&temp);
-    quaternion q2(temp,deg_to_rad * 10.f);
-    static float time = 0;
-    time += 1.0 /  60.0;
-    quaternion qnew  =interpolate_q(q1,q2,time * 10);
+    static char name[64] = "";
+    bool update_components(Game* game) {
+        //ImGui::ShowDemoWindow();
+        ImGui::Begin("Supa kame");
+        defer{ImGui::End();};
+        static bool loggedIn = false;
+        if(!loggedIn) {
+            static bool triedToLog = false;
+            static char buf1[12] = "";
+            static int port = 0;
+            if(!triedToLog) {
+                static bool fileLoaded = false;
+                if(!fileLoaded)  {
+                    if(does_file_exist("connection.info")) {
+                        size_t size = 0;
+                        char* data = load_file("connection.info",&size);
+                        if(size < 64){
+                            sscanf(data,"%s %d %s",buf1,&port,name);
+                        }
+                        free(data);
+                        fileLoaded = true;
+                    }
+                }
+                ImGui::InputText("name", name, 12);
+                ImGui::InputText("address", buf1, 64);
+                ImGui::InputInt("port", &port, 1);
+                if (ImGui::Button("Log in")) {
+                    // 60000
+                    game->connection.Init(buf1,abs(port), name);
+                    game->connection.OpenConnection();
+                    triedToLog = true;
+                    FILE* f = fopen("connection.info","w");
+                    if(f) fprintf(f,"%s %d %s",buf1,port,name);
+                    fclose(f);
+                }
+            } else {
+                if (LOGIN_ACCEPTED == game->connection.Update()) {
+                    loggedIn = true;
+                    disable_cursor();
+                }
+                static double timer = 4.0;
 
-    render_cube(&game->renderer,{0,10,0},
-            {1,1,1},qnew,{0,0,255,255});
+                timer -= 1.0 / 60.0;
+                if(timer < 0 ) return 0;
+            }
 
-    return 1;
-}
+        } else {
+            game->connection.input = game->inputs;
+            //game->connection.yaw = game->inputs.lastmpos.x - game->inputs.mpos.x ;
+            game->connection.Update();
+
+            COMPONENT_TYPES(UPDATE_COMPONENT)
+        }
+
+        quaternion q1({0,1,0},deg_to_rad * 1.f);
+        vec3 temp(0,1,0.5);
+        normalize(&temp);
+        quaternion q2(temp,deg_to_rad * 10.f);
+        static float time = 0;
+        time += 1.0 /  60.0;
+        quaternion qnew  =interpolate_q(q1,q2,time * 10);
+
+        render_cube(&game->renderer,{0,10,0},
+                {1,1,1},qnew,{0,0,255,255});
+
+        return 1;
+    }
 
 
-Entity* get_networksynch_object(Game* game);
-void init_game(Game* game)
-{
-    memset(game,0,(sizeof *game) - sizeof(Client));
-    u32 totalsize = sizeof(Entity) * MAXENTITIES + sizeof(Entity*) * MAXENTITIES;
-    for(u32 i = 0; i < MaxComponent;i++) {
-        if(ENTITY_UPDATES[i]) {
+    Entity* get_networksynch_object(Game* game);
+    void init_game(Game* game)
+    {
+        memset(game,0,(sizeof *game) - sizeof(Client));
+        u32 totalsize = sizeof(Entity) * MAXENTITIES + sizeof(Entity*) * MAXENTITIES;
+        for(u32 i = 0; i < MaxComponent;i++) {
+            if(ENTITY_UPDATES[i]) {
+                totalsize += ENTITY_MAX_SIZES[i] * sizeof(void*);
+            }
+            totalsize += ENTITY_MAX_SIZES[i] * ENTITY_SIZES[i];
             totalsize += ENTITY_MAX_SIZES[i] * sizeof(void*);
         }
-        totalsize += ENTITY_MAX_SIZES[i] * ENTITY_SIZES[i];
-        totalsize += ENTITY_MAX_SIZES[i] * sizeof(void*);
-    }
-    LOG("allocating %d memory for components",totalsize);
-    u8* gamememory = (u8*)malloc(totalsize);
-    ASSERT_MESSAGE(gamememory,"too many components!");
-    u32 usedmem = 0;
-    usedmem += init_pool(&game->entities,sizeof(Entity),gamememory + usedmem,MAXENTITIES);;
-    for(i32 i = 0; i < (i32)MaxComponent;i++) {
-        usedmem += init_pool(&game->componentPools[i],ENTITY_SIZES[i],gamememory + usedmem,ENTITY_MAX_SIZES[i]);
-    }
-    //COMPONENT_TYPES(GENERATE_POINTERALIASES);
-    // init update vectors
-    for(i32 i = 0; i < (i32)MaxComponent;i++) {
-        if(ENTITY_UPDATES[i]) {
-            usedmem += init_thightarray(&game->updateArrays[i],sizeof(void*),gamememory + usedmem,ENTITY_MAX_SIZES[i]);
+        LOG("allocating %d memory for components",totalsize);
+        u8* gamememory = (u8*)malloc(totalsize);
+        ASSERT_MESSAGE(gamememory,"too many components!");
+        u32 usedmem = 0;
+        usedmem += init_pool(&game->entities,sizeof(Entity),gamememory + usedmem,MAXENTITIES);;
+        for(i32 i = 0; i < (i32)MaxComponent;i++) {
+            usedmem += init_pool(&game->componentPools[i],ENTITY_SIZES[i],gamememory + usedmem,ENTITY_MAX_SIZES[i]);
         }
-    }
-
-    // INIT GAMES START COMPONENTS
-    //Entity* player = get_player_object(game);
-    //Entity* floor = get_floor_object(game,{0,0,0},{5,1,5});
-    Entity* net = get_networksynch_object(game);
-    //(void)player;(void)floor;(void)net;
-    game->camera = get_camera(
-            {0.f,20.f,-15.f},
-            0,-90,
-            90.f,
-            (float)SCREENWIDHT / (float)SCREENHEIGHT
-            );
-
-}
-
-static Color colors[4] = {
-    {255,100,100,255},
-    {100,255,100,255},
-    {100,100,255,255},
-    {100,100,100,255}};
-
-Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data,
-        vec3 pos,vec3 scale,quaternion orientation)
-{
-    (void)colors;
-    (void)data;
-    RenderComponent* rend = (RenderComponent*)get_component(game,Render);
-    TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
-    bool playerFound = false;
-    for(const PlayerData& player : data) {
-        if(player.kuutioId == cubeID && !strcmp(player.name,name)) {
-            playerFound = true;
+        //COMPONENT_TYPES(GENERATE_POINTERALIASES);
+        // init update vectors
+        for(i32 i = 0; i < (i32)MaxComponent;i++) {
+            if(ENTITY_UPDATES[i]) {
+                usedmem += init_thightarray(&game->updateArrays[i],sizeof(void*),gamememory + usedmem,ENTITY_MAX_SIZES[i]);
+            }
         }
+
+        // INIT GAMES START COMPONENTS
+        //Entity* player = get_player_object(game);
+        //Entity* floor = get_floor_object(game,{0,0,0},{5,1,5});
+        Entity* net = get_networksynch_object(game);
+        //(void)player;(void)floor;(void)net;
+        game->camera = get_camera(
+                {0.f,20.f,-15.f},
+                0,-90,
+                90.f,
+                (float)SCREENWIDHT / (float)SCREENHEIGHT
+                );
+
     }
-    Entity* ent = NULL;
-    if(playerFound) {
-        PlayerCameraComponent* cam = (PlayerCameraComponent*)get_component(game,PlayerCamera);
-        ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran,(ComponentHeader*)cam};
-        ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
-        PlayerCameraInit(cam,ent,tran);
-    } else {
+
+    static Color colors[4] = {
+        {255,100,100,255},
+        {100,255,100,255},
+        {100,100,255,255},
+        {100,100,100,255}};
+
+    Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data,
+            vec3 pos,vec3 scale,quaternion orientation)
+    {
+        (void)colors;
+        (void)data;
+        RenderComponent* rend = (RenderComponent*)get_component(game,Render);
+        TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
+        bool playerFound = false;
+        for(const PlayerData& player : data) {
+            if(player.kuutioId == cubeID && !strcmp(player.name,name)) {
+                playerFound = true;
+            }
+        }
+        Entity* ent = NULL;
+        if(playerFound) {
+            PlayerCameraComponent* cam = (PlayerCameraComponent*)get_component(game,PlayerCamera);
+            ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran,(ComponentHeader*)cam};
+            ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+            PlayerCameraInit(cam,ent,tran);
+        } else {
+            ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
+            ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+        }
+        RenderInit(rend,ent,{255,0,0,255});
+        TransformInit(tran,ent,pos,scale,orientation);
+        // COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
+        return ent;
+    }
+
+    Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation)
+    {
+        RenderComponent* rend = (RenderComponent*)get_component(game,Render);
+        TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
         ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
-        ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+        Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+        if(pos.x < 0 && pos.z == 0)
+            RenderInit(rend,ent,colors[0]);
+        else if(pos.x == 0 && pos.z < 0)
+            RenderInit(rend,ent,colors[1]);
+        else if(pos.x > 0 && pos.z == 0)
+            RenderInit(rend,ent,colors[2]);
+        else if(pos.x == 0 && pos.z > 0)
+            RenderInit(rend,ent,colors[3]);
+        else RenderInit(rend,ent,{255,255,255,255});
+
+        TransformInit(tran,ent,pos,scale,orientation);
+        // COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
+
+        return ent;
     }
-    RenderInit(rend,ent,{255,0,0,255});
-    TransformInit(tran,ent,pos,scale,orientation);
-    // COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
-    return ent;
-}
 
-Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation)
-{
-    RenderComponent* rend = (RenderComponent*)get_component(game,Render);
-    TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
-    ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
-    Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
-    if(pos.x < 0 && pos.z == 0)
-        RenderInit(rend,ent,colors[0]);
-    else if(pos.x == 0 && pos.z < 0)
-        RenderInit(rend,ent,colors[1]);
-    else if(pos.x > 0 && pos.z == 0)
-        RenderInit(rend,ent,colors[2]);
-    else if(pos.x == 0 && pos.z > 0)
-        RenderInit(rend,ent,colors[3]);
-    else RenderInit(rend,ent,{255,255,255,255});
+    Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation)
+    {
+        RenderComponent* rend = (RenderComponent*)get_component(game,Render);
+        TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
+        ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
+        Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+        RenderInit(rend,ent,{0,255,0,1});
+        TransformInit(tran,ent,pos,scale,orientation);
+        // COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
+        return ent;
+    }
 
-    TransformInit(tran,ent,pos,scale,orientation);
-    // COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
-
-    return ent;
-}
-
-Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation)
-{
-    RenderComponent* rend = (RenderComponent*)get_component(game,Render);
-    TransformComponent* tran = (TransformComponent*)get_component(game,Transform);
-    ComponentHeader* components[] = {(ComponentHeader*)rend,(ComponentHeader*)tran};
-    Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
-    RenderInit(rend,ent,{0,255,0,1});
-    TransformInit(tran,ent,pos,scale,orientation);
-    // COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
-    return ent;
-}
-
-Entity* get_networksynch_object(Game* game) {
-    NetWorkSyncComponent* net = (NetWorkSyncComponent*)get_component(game,NetWorkSync);
-    ComponentHeader* components[] = {(ComponentHeader*)net};
-    Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
-    NetWorkSyncInit(net,ent);
-    return ent;
-}
+    Entity* get_networksynch_object(Game* game) {
+        NetWorkSyncComponent* net = (NetWorkSyncComponent*)get_component(game,NetWorkSync);
+        ComponentHeader* components[] = {(ComponentHeader*)net};
+        Entity* ent = get_new_entity(game,NULL,components,ARRAY_SIZE(components));
+        NetWorkSyncInit(net,ent);
+        return ent;
+    }
 #endif
