@@ -4,7 +4,7 @@ This engine/ game is done as part of the school course. Nothing super serious, m
 Source code can be found [**here**](https://github.com/Pendergaster/MultiplayerMotor)
 Project includes seperate server and client project
 
-#Tools used
+## Tools used
 
 - [GLWF](http://www.glfw.org/)
 - [ImGui](https://github.com/ocornut/imgui)
