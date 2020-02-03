@@ -17,7 +17,6 @@
 #include "cppincludes.h"
 #endif
 #include <imgui/imgui.h>
-#include <chrono>
 
 #define DEFAULT_DYNAMICARRAY_SIZE 6
 static void* get_dynamicArray(const u32 size)
@@ -161,6 +160,22 @@ static void return_to_pool(Pool* pool,void* ret)
 #define GENERATE_UPDATE_BOOLS(name,num,update) update,
 #define GENERATE_POINTERALIASES(name,num,...) game->CONCAT(name,Pool) = (CONCAT(name,Component)*)(componentmem + usedmem);usedmem += sizeof(CONCAT(name,Component)) * num;
 #define GENERATE_COMPONENTPOOL(name,...) CONCAT(name,Component)* CONCAT(name,Pool);u32 CONCAT(name,Index);
+#if 0
+#define GENERATE_GET_COMPONENT_FUNCTION(name,...) static CONCAT(name,Component)* CONCAT(CONCAT(Get,name),COMPONENT)(Game* game){\
+    CONCAT(name,Component)* ret = NULL;\
+    if(game->freeComponents[name].lastindex != 0) {\
+        ret = (CONCAT(name,Component)*)get_back_from_tight_array(&game->freeComponents[name]);\
+        game->freeComponents[name].lastindex -= 1;\
+    } else {\
+        if(game->CONCAT(name,Index) >= ENTITY_MAX_SIZES[name]) ABORT_MESSAGE("TOO MANY "#name" COMPONENTS!");\
+        ret = &game->CONCAT(name,Pool)[game->CONCAT(name,Index)];\
+        game->CONCAT(name,Index)++;\
+    }\
+    memset(ret,0,sizeof *ret);\
+    ret->header.type = name;\
+    return ret;\
+}
+#endif
 
 #define UPDATE_COMPONENT(name,num,update) do {\
     IF_PREPROCESSOR(update,\
@@ -188,10 +203,10 @@ struct ComponentHeader {
 
 #define MAXENTITIES 10000
 #define COMPONENT_TYPES(FUNC)\
-    FUNC(Transform,MAXENTITIES,false)\
-    FUNC(NetWorkSync,1,true)\
-    FUNC(Render,MAXENTITIES,true)\
-    FUNC(PlayerCamera,1,true)\
+    FUNC(Transform, MAXENTITIES, false)\
+    FUNC(NetWorkSync, 1, true)\
+    FUNC(Render, MAXENTITIES, true)\
+    FUNC(PlayerCamera, 1, true)\
 
 
 DECLARECOMPONENT(Transform,
@@ -221,7 +236,6 @@ DECLARECOMPONENT(NetWorkSync,
         double                  currentTime;
         double                  lastTime;
         double                  targetTime;
-        double                  serverTime;
         );
 
 // pushes box to renderer, color
@@ -280,6 +294,8 @@ Entity* get_new_entity(Game* game,funcptr dispose,ComponentHeader** components,c
     }
     return ent;
 }
+
+//COMPONENT_TYPES(GENERATE_GET_COMPONENT_FUNCTION);
 
 void* get_component(Game* game,ComponentType component)
 {
@@ -358,7 +374,7 @@ UPDATEFUNC(PlayerCamera) {
     scale(&target,5.f);
     vec3 direction = (comp->playerTrans->pos + target) - game->camera.position;
     normalize(&direction);
-
+#if 1
     vec3 up;
     up = cross_product(direction, {0,1,0});
     normalize(&up);
@@ -375,19 +391,36 @@ UPDATEFUNC(PlayerCamera) {
     vec3 dist = camPos - game->camera.position;
     float speed = 0.15;
 
+    //ImGui::Text("dist: %f %f %f", dist.x,dist.y,dist.z);
+    //ImGui::Text("cam target: %f %f %f", camPos.x,camPos.y,camPos.z);
     float l = lenght(dist);
+    //float maxLen = 4.f;
+    game->camera.position = camPos;
+#if 0
     if(l < speed) {
         game->camera.position = camPos;
-    } else {
+    } else { // if(l < maxLen)
         normalize(&dist);
         scale(&dist,speed);
+        //ImGui::Text("adding: %f %f %f", dist.x,dist.y,dist.z);
         game->camera.position = game->camera.position + dist;
     }
+#endif
+#if 0
+    else {
+        normalize(&dist);
+        scale(&dist,-maxLen);
+        game->camera.position = camPos + dist;
+    }
+#endif
     create_lookat_mat4(&game->camera.view,game->camera.position,
             comp->playerTrans->pos + target ,up);
 
     render_cube(&game->renderer,comp->playerTrans->pos + target,
             {0.2,0.2,0.2},{0,0,0,1},{0,0,255,255});
+#endif
+    printf("comp->playerTrans %f %f %f \n", comp->playerTrans->pos.x, comp->playerTrans->pos.y, comp->playerTrans->pos.z);
+    //printf("comp->orientation %f %f %f \n", comp->playerTrans->orientation.i,comp->playerTrans->orientation.j ,comp->playerTrans->orientation.k);
 }
 
 Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& data,
@@ -396,7 +429,7 @@ Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 Entity* get_freesimulation_object(Game* game,vec3 pos,vec3 scale,quaternion orientation);
 
 InterpolationData spawn_network_object(Game* game,const ObjectTracker& track,int id) {
-    LOG("Spewning new object!");
+    LOG("Spawning new object!");
     InterpolationData ret;
     ret.first.track = track;
     ret.last.track = track;
@@ -431,28 +464,16 @@ InterpolationData spawn_network_object(Game* game,const ObjectTracker& track,int
 
 UPDATEFUNC(NetWorkSync) {
 
-    static double oldTime = 0;
-    static double targetTime = 0;
-    static double timeWindow = 0;
-    static double deltaTime = 0;
+    //static double lastTime = glfwGetTime();
+    comp->currentTime = glfwGetTime();
+    //printf("step lenght %f\n", comp->currentTime - lastTime);
+    //lastTime = comp->currentTime;
 
-
-    static double lastTime = glfwGetTime();
-    double currentTime = glfwGetTime();
-    if(timeWindow != 0)
-        deltaTime += currentTime - lastTime;
-    float deltaTemp = currentTime - lastTime;
-    lastTime = currentTime;
 
     if(game->connection.isNewData) {
-
-        if(timeWindow != 0)
-            deltaTime = deltaTime - timeWindow;
-        oldTime = targetTime;
-        targetTime = game->connection.GetServerDelta();
-        if(oldTime != 0)
-            timeWindow = targetTime - oldTime;
-
+        printf("is new data!\n");
+        comp->lastTime = comp->targetTime;
+        comp->targetTime = comp->currentTime;
         const std::vector<ObjectTracker>& serverobjs = game->connection.Objects;
         for(size_t i = 0; i < serverobjs.size();i++) {
             if(i >= dynamic_array_size(comp->objs)) {
@@ -472,37 +493,56 @@ UPDATEFUNC(NetWorkSync) {
                     comp->objs[i].first.track.type =  ObjectType::Inactive;
                     comp->objs[i].last.track.type =  ObjectType::Inactive;
                 }
-            } else if (comp->objs[i].first.track.type != ObjectType::Inactive){
+            } else if(comp->objs[i].first.track.type != ObjectType::Inactive) {
                 //sync objects
                 comp->objs[i].first = comp->objs[i].last;
+#if 1
+                comp->objs[i].trans->pos =  comp->objs[i].first.track.pos;
+                comp->objs[i].trans->orientation =  comp->objs[i].first.track.orientation;
+#endif
+                //comp->objs[i].trans->pos = comp->objs[i].first.track.pos;
+                //comp->objs[i].trans->orientation = comp->objs[i].first.track.orientation;
+
                 //comp->objs[i].first.track.pos = comp->objs[i].trans->pos;
                 comp->objs[i].last.track = serverobjs[i];
             }
         }
+    } else {
+
+        size_t size = dynamic_array_size(comp->objs);
+        double timeWindow = comp->targetTime - comp->lastTime;
+        double current = comp->currentTime - comp->targetTime;
+        double delta = current / timeWindow;
+        printf("delta %f current %f window  %f ::::::: ", delta, current, timeWindow);
+
+        for(InterpolationData* data = comp->objs; data != comp->objs + size; data++) {
+            if(data->first.track.type == ObjectType::Inactive) continue;
+            vec3 target = data->last.track.pos - data->first.track.pos;
+            target = data->first.track.pos + target;
+#if 0
+            data->trans->pos = data->last.track.pos;// vec_lerp(data->first.track.pos,data->last.track.pos,delta);
+            data->trans->orientation = data->last.track.orientation; //interpolate_q(data->first.track.orientation,
+            //data->last.track.orientation,delta);
+#else
+
+            data->trans->pos = vec_lerp(data->first.track.pos, data->last.track.pos, delta);
+            data->trans->orientation = interpolate_q(data->first.track.orientation,
+                    data->last.track.orientation, delta);
+#endif
+
+            normalize(&data->trans->orientation);
+        }
     }
 
-    size_t size = dynamic_array_size(comp->objs);
-    double delta = deltaTime / timeWindow;
-
-
-    for(InterpolationData* data = comp->objs; data != comp->objs + size; data++) {
-        if(data->first.track.type == ObjectType::Inactive) continue;
-        vec3 target = data->last.track.pos - data->first.track.pos;
-        target = data->first.track.pos + target;
-        data->trans->pos = vec_lerp(data->first.track.pos,data->last.track.pos,delta);
-        data->trans->orientation = interpolate_q(data->first.track.orientation,
-                data->last.track.orientation,delta);
-
-        normalize(&data->trans->orientation);
-    }
     for(const PlayerData& data : game->connection.Players) {
         ImGui::Text("Player: %s -- Score %d",data.name,data.score);
     }
+
 }
 
 static char name[64] = "";
 bool update_components(Game* game) {
-
+    //ImGui::ShowDemoWindow();
     ImGui::Begin("Supa kame");
     defer{ImGui::End();};
     static bool loggedIn = false;
@@ -548,6 +588,7 @@ bool update_components(Game* game) {
 
     } else {
         game->connection.input = game->inputs;
+        //game->connection.yaw = game->inputs.lastmpos.x - game->inputs.mpos.x ;
         game->connection.Update();
 
         COMPONENT_TYPES(UPDATE_COMPONENT)
@@ -588,6 +629,7 @@ void init_game(Game* game)
     for(i32 i = 0; i < (i32)MaxComponent;i++) {
         usedmem += init_pool(&game->componentPools[i],ENTITY_SIZES[i],gamememory + usedmem,ENTITY_MAX_SIZES[i]);
     }
+    //COMPONENT_TYPES(GENERATE_POINTERALIASES);
     // init update vectors
     for(i32 i = 0; i < (i32)MaxComponent;i++) {
         if(ENTITY_UPDATES[i]) {
@@ -596,7 +638,10 @@ void init_game(Game* game)
     }
 
     // INIT GAMES START COMPONENTS
+    //Entity* player = get_player_object(game);
+    //Entity* floor = get_floor_object(game,{0,0,0},{5,1,5});
     Entity* net = get_networksynch_object(game);
+    //(void)player;(void)floor;(void)net;
     game->camera = get_camera(
             {0.f,20.f,-15.f},
             0,-90,
@@ -637,6 +682,7 @@ Entity* get_player_object(Game* game,int cubeID,const std::vector<PlayerData>& d
     }
     RenderInit(rend,ent,{255,0,0,255});
     TransformInit(tran,ent,pos,scale,orientation);
+    // COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
     return ent;
 }
 
@@ -657,6 +703,7 @@ Entity* get_floor_object(Game* game,vec3 pos,vec3 scale,quaternion orientation)
     else RenderInit(rend,ent,{255,255,255,255});
 
     TransformInit(tran,ent,pos,scale,orientation);
+    // COMPONENTINIT(Transform,vec3 pos,vec3 scale,quaternion orientation) {
 
     return ent;
 }
