@@ -84,6 +84,14 @@ StyleCopReport.xml
 *.svclog
 *.scc
 
+*.snl
+*.dll
+*.lib
+*.vcproj
+*.swap
+*.swp
+*.filters
+
 # Chutzpah Test files
 _Chutzpah*
 
