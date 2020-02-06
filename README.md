@@ -11,10 +11,8 @@ Project includes seperate server and client project
 - [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h)
 - [RakNet](https://github.com/facebookarchive/RakNet)
 - [Glad](https://github.com/Dav1dde/glad)
+- [Bullet](https://github.com/bulletphysics/bullet3)
 - OpenGL
-- [Vim](https://www.vim.org/)
-- [Visual Studio](https://visualstudio.microsoft.com/)
-
 
 
 ![pic](demo.gif)
